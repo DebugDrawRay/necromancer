@@ -6,22 +6,26 @@ public class Skeleton : Actor
     public RaiseSkeleton necro;
 
     [Header("Positioning")]
-    public float followDistance;
+    public float checkTargetRadius;
+    public float atPositionRadius;
+    public float followRadius;
+    public float attackRadius;
+
     public bool withinNecroRange
     {
         get
         {
-            return Vector3.Distance(transform.position, Necromancer.instance.transform.position) <= followDistance;
+            return Vector3.Distance(transform.position, Necromancer.instance.transform.position) <= followRadius;
         }
     }
-    bool withinGroupRange
+    private bool withinGroupRange
     {
         get
         {
             for (int i = 0; i < necro.activeSkeletons.Count; i++)
             {
                 Skeleton skel = necro.activeSkeletons[i];
-                if (Vector3.Distance(transform.position, skel.transform.position) <= followDistance && skel.withinNecroRange)
+                if (Vector3.Distance(transform.position, skel.transform.position) <= followRadius && skel.withinNecroRange)
                 {
                     return true;
                 }
@@ -30,19 +34,18 @@ public class Skeleton : Actor
         }
     }
 
+
     [Header("Combat")]
     public string validTargets;
     public LayerMask targetLayers;
 
-    public float seekDistance;
-    public float attackRange;
     public float attackInterval;
     private float currentInterval;
     public bool withinAttackRange
     {
         get
         {
-            return Vector3.Distance(transform.position, currentTarget.transform.position) <= attackRange;
+            return Vector3.Distance(transform.position, currentTarget.transform.position) <= attackRadius;
         }
     }
 
@@ -62,23 +65,23 @@ public class Skeleton : Actor
 
     public enum States
     {
-        FollowLeader,
-        AttackTarget,
         Idle,
         MoveToLocation,
-        Follow,
         Attack
     }
     public States currentState;
-
-    //new shit
-    public float checkTargetRadius;
-    public float atPositionRadius;
 
     protected override void InitializeOnAwake()
     {
         base.InitializeOnAwake();
         currentInterval = attackInterval;
+        SkeletonEvent.BroadcastEvent += ChangeLocation;
+    }
+
+    void OnEnable()
+    {
+        currentTarget = necro.transform;
+        previousTarget = necro.transform;
     }
 
     void Update()
@@ -94,63 +97,83 @@ public class Skeleton : Actor
         actions.primaryDirection = direction.normalized;
     }
 
+    void MoveTo(Vector3 position)
+    {
+        Vector3 direction = position - transform.position;
+        direction.y = direction.z;
+        actions.primaryDirection = direction.normalized;
+    }
+
     void Attack(Actor target)
     {
-
         if (currentInterval > 0)
         {
             currentInterval -= Time.deltaTime;
         }
         else
         {
+            target.DealDamage(currentStats.strength);
             currentInterval = attackInterval;
         }
     }
 
-    void ChangeLocation(Vector3 position)
+    public void ChangeLocation(Transform trans)
     {
-        List<Actor> enemies = new List<Actor>();
-        Necromancer necro = null;
-
-        Collider[] hits = Physics.OverlapSphere(position, checkTargetRadius, targetLayers);
-        for(int i = 0; i < hits.Length; i++)
+        List<Actor> enemies = CheckForEnemies(trans, checkTargetRadius, targetLayers, validTargets);
+        if (enemies.Count > 0)
         {
-            if(hits[i].tag == validTargets)
-            {
-                enemies.Add(hits[i].GetComponent<Actor>());
-            }
-
-            if(hits[i].GetComponent<Necromancer>())
-            {
-                necro = hits[i].GetComponent<Necromancer>();
-            }
-        }
-
-        if(enemies.Count > 0)
-        {
-            Actor closest = null;
-            float closestRange = checkTargetRadius;
-            for(int i = 0; i < enemies.Count; i++)
-            {
-                Actor select = enemies[i];
-                float dist = Vector3.Distance(position, select.transform.position);
-                if(dist <= closestRange)
-                {
-                    closest = select;
-                    closestRange = dist;
-                }
-            }
-            currentTarget = closest.transform;
+            currentTarget = FindClosestTarget(enemies, trans, checkTargetRadius).transform;
             if (previousTarget != currentTarget)
             {
                 previousTarget = currentTarget;
-                currentState = States.Follow;
+                currentState = States.MoveToLocation;
             }
         }
         else
         {
-
+            currentTarget = trans;
+            previousTarget = trans;
+            currentState = States.MoveToLocation;
         }
+    }
+
+    public void ReturnHome(Transform home)
+    {
+        currentTarget = home;
+        previousTarget = home;
+        currentState = States.MoveToLocation;
+    }
+
+    List<Actor> CheckForEnemies(Transform origin, float radius, LayerMask layers, string tagToWatch)
+    {
+        List<Actor> enemies = new List<Actor>();
+
+        Collider[] hits = Physics.OverlapSphere(origin.position, radius, layers);
+        for (int i = 0; i < hits.Length; i++)
+        {
+            if (hits[i].tag == tagToWatch)
+            {
+                enemies.Add(hits[i].GetComponent<Actor>());
+            }
+        }
+        return enemies;
+    }
+
+    Actor FindClosestTarget(List<Actor> targets, Transform origin, float radius)
+    {
+        Actor closest = null;
+        float closestRange = radius + 5;
+        for (int i = 0; i < targets.Count; i++)
+        {
+            Actor select = targets[i];
+            float dist = Vector3.Distance(origin.position, select.transform.position);
+            if (dist <= closestRange)
+            {
+                closest = select;
+                closestRange = dist;
+            }
+        }
+        return closest;
     }
 
     void RunStates()
@@ -158,10 +181,59 @@ public class Skeleton : Actor
         switch(currentState)
         {
             case States.Idle:
+                actions.primaryDirection = Vector3.zero;
+                if(currentTarget.GetComponent<RaiseSkeleton>())
+                {
+                    if (!withinNecroRange || !withinGroupRange)
+                    {
+                        currentState = States.MoveToLocation;
+                    }
+                }
+                List<Actor> enemiesInRange = CheckForEnemies(transform, checkTargetRadius, targetLayers, validTargets);
+                if (enemiesInRange.Count > 0)
+                {
+                    currentTarget = FindClosestTarget(enemiesInRange, transform, checkTargetRadius).transform;
+                    previousTarget = currentTarget;
+                    currentState = States.MoveToLocation;
+                }
                 break;
             case States.Attack:
+                actions.primaryDirection = Vector3.zero;
+                Attack(currentTarget.GetComponent<Actor>());
+                if(currentTarget == null)
+                {
+                    currentState = States.Idle;
+                }
+                if(!withinAttackRange)
+                {
+                    currentState = States.MoveToLocation;
+                }
                 break;
             case States.MoveToLocation:
+                if(currentTarget.tag == validTargets)
+                {
+                    Follow(currentTarget);
+                    if(withinAttackRange)
+                    {
+                        currentState = States.Attack;
+                    }
+                }
+                else if(currentTarget.GetComponent<RaiseSkeleton>())
+                {
+                    Follow(currentTarget);
+                    if (withinNecroRange)
+                    {
+                        currentState = States.Idle;
+                    }
+                }
+                else
+                {
+                    Follow(currentTarget);
+                    if(Vector3.Distance(transform.position, currentTarget.position) <= atPositionRadius)
+                    {
+                        currentState = States.Idle;
+                    }
+                }
                 break;
         }
     }

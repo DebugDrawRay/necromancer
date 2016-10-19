@@ -30,7 +30,7 @@ public class Necromancer : Actor
 
         actions.primaryAction = input.RaiseSkeleton.WasPressed;
         actions.secondaryAction = input.Command.WasPressed;
-
+        actions.tertiaryAction = input.CallSkeletons.WasPressed;
         bus.Action(actions);
     }
 }

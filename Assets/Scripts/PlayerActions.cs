@@ -18,6 +18,8 @@ public class PlayerActions : PlayerActionSet
 
     public PlayerAction Command;
 
+    public PlayerAction CallSkeletons;
+
     public PlayerActions()
     {
         MoveUp = CreatePlayerAction("Move Up");
@@ -37,6 +39,8 @@ public class PlayerActions : PlayerActionSet
         RaiseSkeleton = CreatePlayerAction("Raise Skeleton");
 
         Command = CreatePlayerAction("Command Skeleton");
+
+        CallSkeletons = CreatePlayerAction("Call Skeletons");
     }
 
     public static PlayerActions BindAll()
@@ -57,6 +61,7 @@ public class PlayerActions : PlayerActionSet
 
         action.Command.AddDefaultBinding(InputControlType.Action2);
 
+        action.CallSkeletons.AddDefaultBinding(InputControlType.Action3);
 
         action.MoveUp.AddDefaultBinding(Key.W);
         action.MoveDown.AddDefaultBinding(Key.S);
@@ -71,6 +76,8 @@ public class PlayerActions : PlayerActionSet
         action.RaiseSkeleton.AddDefaultBinding(Key.Space);
 
         action.Command.AddDefaultBinding(Mouse.LeftButton);
+
+        action.CallSkeletons.AddDefaultBinding(Mouse.RightButton);
 
         return action;
     }

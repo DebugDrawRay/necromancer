@@ -5,6 +5,9 @@ using System.Collections;
 public class Action : MonoBehaviour 
 {
     public InputActions.Actions primaryActionToRegister;
+    public InputActions.Actions secondaryActionToRegister;
+    public InputActions.Actions teritiaryActionToRegister;
+
     public float cost;
 
     private InputBus bus;

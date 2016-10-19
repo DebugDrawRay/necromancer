@@ -17,11 +17,13 @@ public class InputBus : MonoBehaviour
         PrimaryDirection,
         PrimaryAction,
         SecondaryAction,
-        SecondaryDirection
+        SecondaryDirection,
+        TertiaryAction
     }
 
     public bool primaryAction;
     public bool secondaryAction;
+    public bool tertiaryAction;
 
     public ActorStats stats;
 }

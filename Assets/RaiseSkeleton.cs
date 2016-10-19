@@ -4,22 +4,28 @@ using System.Collections.Generic;
 public class RaiseSkeleton : Action 
 {
     public GameObject skeleton;
-    public List<Skeleton> activeSkeletons;
+
+    public List<Skeleton> activeSkeletons = new List<Skeleton>();
+
+    public List<Skeleton> followingSkeletons = new List<Skeleton>();
 
     protected override void Execute(InputActions actions)
     {
-        bool invoke = false;
+        bool invokePrimary = false;
         switch(primaryActionToRegister)
         {
             case InputActions.Actions.PrimaryAction:
-                invoke = actions.primaryAction;
+                invokePrimary = actions.primaryAction;
                 break;
             case InputActions.Actions.SecondaryAction:
-                invoke = actions.secondaryAction;
+                invokePrimary = actions.secondaryAction;
+                break;
+            case InputActions.Actions.TertiaryAction:
+                invokePrimary = actions.tertiaryAction;
                 break;
         }
 
-        if(invoke && activeSkeletons.Count < actions.stats.maxSkeletons)
+        if(invokePrimary && activeSkeletons.Count < actions.stats.maxSkeletons)
         {
             //Temporary Positioning
             Vector3 direction = Random.insideUnitCircle * 2;
@@ -29,7 +35,10 @@ public class RaiseSkeleton : Action
 
             GameObject newSkel = (GameObject)Instantiate(skeleton, position, Quaternion.identity);
             Skeleton skel = newSkel.GetComponent<Skeleton>();
+
             activeSkeletons.Add(skel);
+            followingSkeletons.Add(skel);
+
             skel.necro = this;
             skel.gameObject.SetActive(true);
         }
