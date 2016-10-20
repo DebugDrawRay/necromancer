@@ -1,18 +1,19 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
 
-public class RaiseSkeleton : Action 
+public class MinionManager : Action 
 {
-    public GameObject skeleton;
+    public InputActions.Actions raiseAction;
+    public GameObject minion;
 
-    public List<Skeleton> activeSkeletons = new List<Skeleton>();
+    public List<Minion> activeMinions = new List<Minion>();
 
-    public List<Skeleton> followingSkeletons = new List<Skeleton>();
+    public List<Minion> followingMinions = new List<Minion>();
 
     protected override void Execute(InputActions actions)
     {
         bool invokePrimary = false;
-        switch(primaryActionToRegister)
+        switch(raiseAction)
         {
             case InputActions.Actions.PrimaryAction:
                 invokePrimary = actions.primaryAction;
@@ -25,7 +26,7 @@ public class RaiseSkeleton : Action
                 break;
         }
 
-        if(invokePrimary && activeSkeletons.Count < actions.stats.maxSkeletons)
+        if(invokePrimary && activeMinions.Count < actions.stats.maxSkeletons)
         {
             //Temporary Positioning
             Vector3 direction = Random.insideUnitCircle * 2;
@@ -33,13 +34,13 @@ public class RaiseSkeleton : Action
             direction.y = 0;
             Vector3 position = transform.position + direction;
 
-            GameObject newSkel = (GameObject)Instantiate(skeleton, position, Quaternion.identity);
-            Skeleton skel = newSkel.GetComponent<Skeleton>();
+            GameObject newSkel = (GameObject)Instantiate(minion, position, Quaternion.identity);
+            Minion skel = newSkel.GetComponent<Minion>();
 
-            activeSkeletons.Add(skel);
-            followingSkeletons.Add(skel);
+            activeMinions.Add(skel);
+            followingMinions.Add(skel);
 
-            skel.necro = this;
+            skel.commander = this;
             skel.gameObject.SetActive(true);
         }
     }

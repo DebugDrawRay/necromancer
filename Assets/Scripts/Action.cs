@@ -4,14 +4,10 @@ using System.Collections;
 [RequireComponent(typeof(InputBus))]
 public class Action : MonoBehaviour 
 {
-    public InputActions.Actions primaryActionToRegister;
-    public InputActions.Actions secondaryActionToRegister;
-    public InputActions.Actions teritiaryActionToRegister;
-
     public float cost;
 
     private InputBus bus;
-
+    
     void Awake()
     {
         bus = GetComponent<InputBus>();

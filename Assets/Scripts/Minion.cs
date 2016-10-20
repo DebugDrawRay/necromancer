@@ -1,9 +1,10 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
 
-public class Skeleton : Actor 
+public class Minion : Actor 
 {
-    public RaiseSkeleton necro;
+    [HideInInspector]
+    public MinionManager commander;
 
     [Header("Positioning")]
     public float checkTargetRadius;
@@ -18,13 +19,14 @@ public class Skeleton : Actor
             return Vector3.Distance(transform.position, Necromancer.instance.transform.position) <= followRadius;
         }
     }
+
     private bool withinGroupRange
     {
         get
         {
-            for (int i = 0; i < necro.activeSkeletons.Count; i++)
+            for (int i = 0; i < commander.activeMinions.Count; i++)
             {
-                Skeleton skel = necro.activeSkeletons[i];
+                Minion skel = commander.activeMinions[i];
                 if (Vector3.Distance(transform.position, skel.transform.position) <= followRadius && skel.withinNecroRange)
                 {
                     return true;
@@ -80,8 +82,8 @@ public class Skeleton : Actor
 
     void OnEnable()
     {
-        currentTarget = necro.transform;
-        previousTarget = necro.transform;
+        currentTarget = commander.transform;
+        previousTarget = commander.transform;
     }
 
     void Update()
@@ -182,19 +184,22 @@ public class Skeleton : Actor
         {
             case States.Idle:
                 actions.primaryDirection = Vector3.zero;
-                if(currentTarget.GetComponent<RaiseSkeleton>())
+                if (currentTarget.GetComponent<MinionManager>())
                 {
                     if (!withinNecroRange || !withinGroupRange)
                     {
                         currentState = States.MoveToLocation;
                     }
                 }
-                List<Actor> enemiesInRange = CheckForEnemies(transform, checkTargetRadius, targetLayers, validTargets);
-                if (enemiesInRange.Count > 0)
+                else
                 {
-                    currentTarget = FindClosestTarget(enemiesInRange, transform, checkTargetRadius).transform;
-                    previousTarget = currentTarget;
-                    currentState = States.MoveToLocation;
+                    List<Actor> enemiesInRange = CheckForEnemies(transform, checkTargetRadius, targetLayers, validTargets);
+                    if (enemiesInRange.Count > 0)
+                    {
+                        currentTarget = FindClosestTarget(enemiesInRange, transform, checkTargetRadius).transform;
+                        previousTarget = currentTarget;
+                        currentState = States.MoveToLocation;
+                    }
                 }
                 break;
             case States.Attack:
@@ -218,7 +223,7 @@ public class Skeleton : Actor
                         currentState = States.Attack;
                     }
                 }
-                else if(currentTarget.GetComponent<RaiseSkeleton>())
+                else if(currentTarget.GetComponent<MinionManager>())
                 {
                     Follow(currentTarget);
                     if (withinNecroRange)

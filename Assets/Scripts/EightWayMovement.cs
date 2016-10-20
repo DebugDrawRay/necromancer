@@ -4,6 +4,7 @@ using System.Collections;
 [RequireComponent(typeof(Rigidbody))]
 public class EightWayMovement : Action 
 {
+    public InputActions.Actions movementAction;
     [Range(0,1)]
     public float acceleration;
     private Rigidbody rigid;
@@ -12,10 +13,21 @@ public class EightWayMovement : Action
         base.InitializeOnAwake();
         rigid = GetComponent<Rigidbody>();
     }
-    protected override void Execute(InputActions action)
+    protected override void Execute(InputActions actions)
     {
-        Vector3 forward = transform.forward * action.primaryDirection.y * action.stats.speed;
-        Vector3 right = transform.right * action.primaryDirection.x * action.stats.speed;
+        Vector3 direction = Vector3.zero;
+        switch (movementAction)
+        {
+            case InputActions.Actions.PrimaryDirection:
+                direction = actions.primaryDirection;
+                break;
+            case InputActions.Actions.SecondaryDirection:
+                direction = actions.secondaryDirection;
+                break;
+        }
+
+        Vector3 forward = transform.forward * direction.y * actions.stats.speed;
+        Vector3 right = transform.right * direction.x * actions.stats.speed;
         Vector3 move = forward + right;
         move.y = rigid.velocity.y;
 
