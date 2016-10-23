@@ -5,6 +5,7 @@ public class Minion : Actor
 {
     [HideInInspector]
     public MinionManager commander;
+    public float speedVariation;
 
     [Header("Positioning")]
     public float checkTargetRadius;
@@ -78,6 +79,12 @@ public class Minion : Actor
         base.InitializeOnAwake();
         currentInterval = attackInterval;
         SkeletonEvent.BroadcastEvent += ChangeLocation;
+    }
+
+    void Start()
+    {
+        currentStats.speed += Random.Range(-speedVariation, speedVariation);
+        UpdateBaseStats();
     }
 
     void OnEnable()
@@ -243,3 +250,4 @@ public class Minion : Actor
         }
     }
 }
+

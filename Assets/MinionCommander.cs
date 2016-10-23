@@ -1,5 +1,5 @@
 ﻿using UnityEngine;
-using System.Collections;
+using System.Collections.Generic;
 
 [RequireComponent(typeof(MinionManager))]
 public class MinionCommander : Action 
@@ -12,6 +12,7 @@ public class MinionCommander : Action
 
     private MinionManager manager;
     private CommandCursor cursor;
+
     void Start()
     {
         manager = GetComponent<MinionManager>();
@@ -77,5 +78,41 @@ public class MinionCommander : Action
                 }
             }
         }
+    }
+}
+
+
+public class WaypointQueue
+{
+    private List<Transform> waypoints = new List<Transform>();
+    private List<Minion> referenceList;
+
+    public Transform this[int index]
+    {
+        get
+        {
+            return waypoints[index];
+        }
+    }
+
+    public WaypointQueue(List<Minion> list)
+    {
+        referenceList = list;
+    }
+
+    public void Add(Transform transform)
+    {
+        waypoints.Add(transform);
+
+        if (waypoints.Count > referenceList.Count)
+        {
+            waypoints.RemoveAt(0);
+            Object.Destroy(waypoints[0].gameObject);
+        }
+    }
+
+    public void Remove(Transform transform)
+    {
+        waypoints.Remove(transform);
     }
 }

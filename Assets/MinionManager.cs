@@ -4,7 +4,9 @@ using System.Collections.Generic;
 public class MinionManager : Action 
 {
     public InputActions.Actions raiseAction;
+    public float raiseRange;
     public GameObject minion;
+    public string vaildCorpse;
 
     public List<Minion> activeMinions = new List<Minion>();
 
@@ -28,11 +30,29 @@ public class MinionManager : Action
 
         if(invokePrimary && activeMinions.Count < actions.stats.maxSkeletons)
         {
-            //Temporary Positioning
-            Vector3 direction = Random.insideUnitCircle * 2;
-            direction.z = direction.y;
-            direction.y = 0;
-            Vector3 position = transform.position + direction;
+            CreateNewMinion();
+        }
+    }
+
+    void CreateNewMinion()
+    {
+        GameObject[] corpses = GameObject.FindGameObjectsWithTag(vaildCorpse);
+        GameObject corpse = null;
+        float closestRange = raiseRange + 5;
+
+        for(int i = 0; i < corpses.Length; i++)
+        {
+            float dist = Vector3.Distance(transform.position, corpses[i].transform.position);
+            if(dist < raiseRange && dist < closestRange)
+            {
+                corpse = corpses[i];
+                closestRange = dist;
+            }
+        }
+
+        if(corpse != null)
+        {
+            Vector3 position = corpse.transform.position;
 
             GameObject newSkel = (GameObject)Instantiate(minion, position, Quaternion.identity);
             Minion skel = newSkel.GetComponent<Minion>();
@@ -42,6 +62,8 @@ public class MinionManager : Action
 
             skel.commander = this;
             skel.gameObject.SetActive(true);
+
+            Destroy(corpse);
         }
     }
 }

@@ -31,6 +31,17 @@ public class Actor : MonoBehaviour
     {
         currentStats.health -= damage;
     }
+
+    public void UpdateBaseStats()
+    {
+        baseStats = (ActorStats)currentStats.Clone();
+    }
+
+    public void UpdateBaseStats(ActorStats newStats)
+    {
+        baseStats = newStats;
+        currentStats = (ActorStats)baseStats.Clone();
+    }
 }
 
 [System.Serializable]
