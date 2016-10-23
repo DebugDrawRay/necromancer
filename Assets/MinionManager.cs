@@ -53,6 +53,7 @@ public class MinionManager : Action
         if(corpse != null)
         {
             Vector3 position = corpse.transform.position;
+            Destroy(corpse);
 
             GameObject newSkel = (GameObject)Instantiate(minion, position, Quaternion.identity);
             Minion skel = newSkel.GetComponent<Minion>();
@@ -62,8 +63,6 @@ public class MinionManager : Action
 
             skel.commander = this;
             skel.gameObject.SetActive(true);
-
-            Destroy(corpse);
         }
     }
 }
