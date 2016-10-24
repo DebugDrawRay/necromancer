@@ -7,27 +7,24 @@ public class Minion : Actor
 {
     [HideInInspector]
     public MinionManager commander;
+
+    [Header("Control Variation")]
     public float speedVariation;
 
-    [Header("Positioning")]
-    public float checkTargetRadius;
+    [Header("Position Radiuses")]
+    public float atNodeRange;
+
     public float atPositionRadius;
-    public float followRadius;
-    public float attackRadius;
+    public float followCommanderRadius;
 
-    //New Stuff AGAIN LOLOLOLOLOLOLOL
-    private PathManager pathing;
-    private int currentPathIndex;
-    public float nodeRange;
+    public float checkTargetRadius;
+    public float attackTargetRadius;
 
-    public List<GraphNode> nodes;
-    private GraphNode currentNode;
-
-    public bool withinNecroRange
+    public bool withinCommanderRange
     {
         get
         {
-            return Vector3.Distance(transform.position, Necromancer.instance.transform.position) <= followRadius;
+            return Vector3.Distance(transform.position, Necromancer.instance.transform.position) <= followCommanderRadius;
         }
     }
 
@@ -38,7 +35,7 @@ public class Minion : Actor
             for (int i = 0; i < commander.activeMinions.Count; i++)
             {
                 Minion skel = commander.activeMinions[i];
-                if (Vector3.Distance(transform.position, skel.transform.position) <= followRadius && skel.withinNecroRange)
+                if (Vector3.Distance(transform.position, skel.transform.position) <= followCommanderRadius && skel.withinCommanderRange)
                 {
                     return true;
                 }
@@ -47,6 +44,12 @@ public class Minion : Actor
         }
     }
 
+    //Pathing
+    private PathManager pathing;
+    private int currentPathIndex;
+
+    public List<GraphNode> nodes;
+    private GraphNode currentNode;
 
     [Header("Combat")]
     public string validTargets;
@@ -58,7 +61,7 @@ public class Minion : Actor
     {
         get
         {
-            return Vector3.Distance(transform.position, currentTarget.transform.position) <= attackRadius;
+            return Vector3.Distance(transform.position, currentTarget.transform.position) <= attackTargetRadius;
         }
     }
 
@@ -76,6 +79,9 @@ public class Minion : Actor
     }
     private Transform previousTarget;
 
+    private float currentHealth;
+
+    //State Control
     public enum States
     {
         Idle,
@@ -89,7 +95,6 @@ public class Minion : Actor
         base.InitializeOnAwake();
         pathing = GetComponent<PathManager>();
         currentInterval = attackInterval;
-        SkeletonEvent.BroadcastEvent += ChangeLocation;
     }
 
     void Start()
@@ -111,13 +116,6 @@ public class Minion : Actor
         bus.Action(actions);
     }
 
-    void Follow(Transform target)
-    {
-        Vector3 direction = target.position - transform.position;
-        direction.y = direction.z;
-        actions.primaryDirection = direction.normalized;
-    }
-
     void FollowPath()
     {
         if(pathing.currentPath.newPath)
@@ -127,45 +125,43 @@ public class Minion : Actor
             {
                 nodes.Add(node);
             }
-            if (currentNode == null)
-            {
-                currentNode = nodes[0];
-            }
-
-            //currentPathIndex = 0;
             pathing.currentPath.newPath = false;
         }
-        else
+        if (nodes.Count > 0)
         {
-            //Path path = pathing.currentPath.path;
-            //Vector3 pos = path.vectorPath[currentPathIndex];
+            currentNode = nodes[0];
 
             Vector3 pos = (Vector3)currentNode.position;
             Vector3 direction = pos - transform.position;
             direction.y = direction.z;
-            actions.primaryDirection = direction.normalized;
-            
-            if(Vector3.Distance(transform.position, pos) < nodeRange)
+
+            direction = direction.normalized;
+            direction.x = Mathf.Round(direction.x);
+            direction.y = Mathf.Round(direction.y);
+            direction.z = Mathf.Round(direction.z);
+
+            actions.primaryDirection = direction;
+
+            if (Vector3.Distance(transform.position, pos) < atNodeRange)
             {
                 nodes.Remove(currentNode);
                 if (nodes.Count > 0)
                 {
                     currentNode = nodes[0];
                 }
-                /*currentPathIndex++;
-                if(currentPathIndex >= path.vectorPath.Count)
-                {
-                    currentPathIndex--;
-                }*/
             }
         }
     }
 
-    void MoveTo(Vector3 position)
+    public override void RecieveDamage(Actor source)
     {
-        Vector3 direction = position - transform.position;
-        direction.y = direction.z;
-        actions.primaryDirection = direction.normalized;
+        base.RecieveDamage(source);
+        if (currentState == States.Idle)
+        {
+            currentTarget = source.transform;
+            previousTarget = currentTarget;
+            currentState = States.MoveToLocation;
+        }
     }
 
     void Attack(Actor target)
@@ -176,7 +172,7 @@ public class Minion : Actor
         }
         else
         {
-            target.DealDamage(currentStats.strength);
+            target.RecieveDamage(this);
             currentInterval = attackInterval;
         }
     }
@@ -248,11 +244,10 @@ public class Minion : Actor
         switch(currentState)
         {
             case States.Idle:
-                currentNode = null;
                 actions.primaryDirection = Vector3.zero;
                 if (currentTarget.GetComponent<MinionManager>())
                 {
-                    if (!withinNecroRange || !withinGroupRange)
+                    if (!withinCommanderRange || !withinGroupRange)
                     {
                         currentState = States.MoveToLocation;
                     }
@@ -270,7 +265,7 @@ public class Minion : Actor
                 break;
             case States.Attack:
                 actions.primaryDirection = Vector3.zero;
-                Attack(currentTarget.GetComponent<Actor>());
+                Attack(enemyTarget);
                 if(currentTarget == null)
                 {
                     currentState = States.Idle;
@@ -283,7 +278,6 @@ public class Minion : Actor
             case States.MoveToLocation:
                 if(currentTarget.tag == validTargets)
                 {
-                    //Follow(currentTarget);
                     FollowPath();
                     if(withinAttackRange)
                     {
@@ -292,16 +286,14 @@ public class Minion : Actor
                 }
                 else if(currentTarget.GetComponent<MinionManager>())
                 {
-                    //Follow(currentTarget);
                     FollowPath();
-                    if (withinNecroRange)
+                    if (withinCommanderRange)
                     {
                         currentState = States.Idle;
                     }
                 }
                 else
                 {
-                    //Follow(currentTarget);
                     FollowPath();
                     if(Vector3.Distance(transform.position, currentTarget.position) <= atPositionRadius)
                     {

@@ -16,29 +16,36 @@ public class PathManager : MonoBehaviour
     void Awake()
     {
         seeker = GetComponent<Seeker>();
+    }
+
+    void Start()
+    {
         currentPath = new CalculatedPath();
     }
 
     void Update()
     {
-        GraphNode node = AstarPath.active.GetNearest(target.position).node;
-
-        if(node != previousNode)
+        if (target != null)
         {
-            CalculatePath(target);
-            previousNode = node;
+            GraphNode node = AstarPath.active.GetNearest(target.position).node;
+
+            if (node != previousNode)
+            {
+                CalculatePath(target);
+                previousNode = node;
+            }
         }
     }
 
     public void SetTarget(Transform newTarget)
     {
         target = newTarget;
-        CalculatePath(target);
+        //CalculatePath(target);
     }
 
-    public void CalculatePath(Transform target)
+    public void CalculatePath(Transform targetTrans)
     {
-        Path newPath = seeker.StartPath(transform.position, target.position, OnPathComplete);
+        seeker.StartPath(transform.position, targetTrans.position, OnPathComplete);
     }
 
     void OnPathComplete(Path p)
@@ -47,7 +54,6 @@ public class PathManager : MonoBehaviour
         {
             currentPath.path = p;
             currentPath.newPath = true;
-
         }
         else
         {
@@ -60,5 +66,4 @@ public class CalculatedPath
 {
     public Path path;
     public bool newPath;
-
 }

@@ -13,6 +13,8 @@ public class Actor : MonoBehaviour
     protected InputActions actions;
     protected InputBus bus;
 
+    protected Actor lastAggressor;
+
     void Awake()
     {
         actions = new InputActions();
@@ -27,9 +29,9 @@ public class Actor : MonoBehaviour
 
     protected virtual void InitializeOnAwake() { }
 
-    public void DealDamage(float damage)
+    public virtual void RecieveDamage(Actor source)
     {
-        currentStats.health -= damage;
+        currentStats.health -= source.currentStats.strength;
     }
 
     public void UpdateBaseStats()
@@ -57,6 +59,6 @@ public class ActorStats : ICloneable
 
     public object Clone()
     {
-        return this.MemberwiseClone();
+        return MemberwiseClone();
     }
 }
