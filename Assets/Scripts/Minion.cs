@@ -48,7 +48,7 @@ public class Minion : Actor
     private PathManager pathing;
     private int currentPathIndex;
 
-    public List<GraphNode> nodes;
+    public List<GraphNode> pathNodes;
     private GraphNode currentNode;
 
     [Header("Combat")]
@@ -120,16 +120,16 @@ public class Minion : Actor
     {
         if(pathing.currentPath.newPath)
         {
-            nodes = new List<GraphNode>();
+            pathNodes = new List<GraphNode>();
             foreach(GraphNode node in pathing.currentPath.path.path)
             {
-                nodes.Add(node);
+                pathNodes.Add(node);
             }
             pathing.currentPath.newPath = false;
         }
-        if (nodes.Count > 0)
+        if (pathNodes.Count > 0)
         {
-            currentNode = nodes[0];
+            currentNode = pathNodes[0];
 
             Vector3 pos = (Vector3)currentNode.position;
             Vector3 direction = pos - transform.position;
@@ -144,10 +144,10 @@ public class Minion : Actor
 
             if (Vector3.Distance(transform.position, pos) < atNodeRange)
             {
-                nodes.Remove(currentNode);
-                if (nodes.Count > 0)
+                pathNodes.Remove(currentNode);
+                if (pathNodes.Count > 0)
                 {
-                    currentNode = nodes[0];
+                    currentNode = pathNodes[0];
                 }
             }
         }

@@ -13,8 +13,6 @@ public class Actor : MonoBehaviour
     protected InputActions actions;
     protected InputBus bus;
 
-    protected Actor lastAggressor;
-
     void Awake()
     {
         actions = new InputActions();
