@@ -1,31 +1,21 @@
-﻿using UnityEngine;
-
-public static class SkeletonEvent 
+﻿public static class Events
 {
-    public delegate void SendActorData(ActorData d);
-    private static event SendActorData Attack;
+    public delegate void BaseEvent<T>(object sender, T e);
+    public static event BaseEvent<AttackMessage> Attacked;
 
-    public static void TriggerAttack(ActorData d)
+    public static void TriggerAttacked(object sender, AttackMessage e)
     {
-        if(Attack != null)
+        if(Attacked != null)
         {
-            Attack(d);
+            Attacked(sender, e);
         }
     }
-    public static void SubscribeAttack(SendActorData del)
-    {
-        Attack += del;
-    }
 }
-
-public class ActorData
+public class AttackMessage
 {
-    public Actor source;
-    public Actor target;
-
-    public ActorData(Actor source, Actor target)
+    public Actor aggressor;
+    public AttackMessage(Actor aggressor)
     {
-        this.source = source;
-        this.target = target;
+        this.aggressor = aggressor;
     }
 }

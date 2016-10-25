@@ -33,6 +33,4 @@ public class Necromancer : Actor
         actions.tertiaryAction = input.CallSkeletons.WasPressed;
         bus.Action(actions);
     }
-
-    //Add event for triggering retaliation when player is attacked
 }

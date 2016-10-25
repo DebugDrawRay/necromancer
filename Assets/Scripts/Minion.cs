@@ -99,6 +99,8 @@ public class Minion : Actor
 
     void Start()
     {
+        Events.Attacked += FriendliesAttacked;
+
         currentStats.speed += Random.Range(-speedVariation, speedVariation);
         UpdateBaseStats();
     }
@@ -156,6 +158,7 @@ public class Minion : Actor
     public override void RecieveDamage(Actor source)
     {
         base.RecieveDamage(source);
+        Events.TriggerAttacked(this, new AttackMessage(source));
         if (currentState == States.Idle)
         {
             currentTarget = source.transform;
@@ -237,6 +240,16 @@ public class Minion : Actor
             }
         }
         return closest;
+    }
+
+    void FriendliesAttacked(object source, AttackMessage message)
+    {
+        if (message.aggressor.tag != gameObject.tag && currentState == States.Idle || currentState == States.MoveToLocation)
+        {
+            currentTarget = message.aggressor.transform;
+            previousTarget = currentTarget;
+            currentState = States.MoveToLocation;
+        }
     }
 
     void RunStates()

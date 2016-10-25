@@ -20,8 +20,9 @@ public class SeekAndDestroy : Actor
     public float atNodeRadius;
 
     [Header("Attacking")]
-    public string validTarget;
-    public LayerMask targetMask;
+    public LayerMask targetingMask;
+    public string primaryTarget;
+    public string secondaryTarget;
 
     public float attackInterval;
     private float currentInterval;
@@ -84,17 +85,34 @@ public class SeekAndDestroy : Actor
         }
     }
 
-    Actor CheckForClosestEnemy(Transform origin, float radius, LayerMask layers, string tagToWatch)
+    Actor CheckForClosestEnemy(Transform origin, float radius, LayerMask layers, string primaryTarget, string secondaryTarget)
     {
-        List<Actor> enemies = new List<Actor>();
+        List<Actor> primaryTargets = new List<Actor>();
+        List<Actor> secondaryTargets = new List<Actor>();
 
         Collider[] hits = Physics.OverlapSphere(origin.position, radius, layers);
         for (int i = 0; i < hits.Length; i++)
         {
-            if (hits[i].tag == tagToWatch)
+            Actor hit = hits[i].GetComponent<Actor>();
+            if(hit.tag == primaryTarget)
             {
-                enemies.Add(hits[i].GetComponent<Actor>());
+                primaryTargets.Add(hit);
             }
+            if(hit.tag == secondaryTarget)
+            {
+                secondaryTargets.Add(hit);
+            }
+        }
+
+        List<Actor> enemies = new List<Actor>();
+
+        if(primaryTargets.Count > 0)
+        {
+            enemies = primaryTargets;
+        }
+        else
+        {
+            enemies = secondaryTargets;
         }
 
         Actor closest = null;
@@ -138,7 +156,7 @@ public class SeekAndDestroy : Actor
         {
             case States.Idle:
                 actions.primaryDirection = Vector3.zero;
-                currentTarget = CheckForClosestEnemy(transform, seekRadius, targetMask, validTarget);
+                currentTarget = CheckForClosestEnemy(transform, seekRadius, targetingMask, primaryTarget, secondaryTarget);
                 if(currentTarget != null)
                 {
                     pathing.SetTarget(currentTarget.transform);
@@ -156,6 +174,7 @@ public class SeekAndDestroy : Actor
                 {
                     currentState = States.Attack;
                 }
+                CheckForNewPrimary();
                 break;
             case States.Attack:
                 actions.primaryDirection = Vector3.zero;
@@ -164,7 +183,18 @@ public class SeekAndDestroy : Actor
                 {
                     currentState = States.Seek;
                 }
+                CheckForNewPrimary();
                 break;
+        }
+    }
+
+    void CheckForNewPrimary()
+    {
+        Actor newTarget = CheckForClosestEnemy(transform, seekRadius, targetingMask, primaryTarget, secondaryTarget);
+        if (newTarget.tag == primaryTarget && currentTarget.tag == secondaryTarget)
+        {
+            currentTarget = newTarget;
+            currentState = States.Seek;
         }
     }
 }

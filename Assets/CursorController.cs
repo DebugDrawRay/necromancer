@@ -14,8 +14,9 @@ public class CursorController : Action
 
     private CommandCursor cursor;
 
-    void Start()
+    protected override void InitializeOnAwake()
     {
+        base.InitializeOnAwake();
         cursor = Instantiate(commandCursor).GetComponent<CommandCursor>();
     }
 
