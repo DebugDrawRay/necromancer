@@ -1,8 +1,9 @@
 ﻿using UnityEngine;
 using Pathfinding;
+using System.Collections;
 using System.Collections.Generic;
 
-[RequireComponent(typeof(PathManager))]
+[RequireComponent(typeof(Seeker))]
 public class Minion : Actor 
 {
     [HideInInspector]
@@ -44,12 +45,13 @@ public class Minion : Actor
         }
     }
 
-    //Pathing
-    private PathManager pathing;
-    private int currentPathIndex;
+    [Header("Pathing")]
+    public LayerMask checkAvoidanceMask;
 
-    public List<GraphNode> pathNodes;
-    private GraphNode currentNode;
+    private Path currentPath;
+
+    private Seeker seeker;
+    private int currentNodeIndex;
 
     [Header("Combat")]
     public string validTargets;
@@ -66,6 +68,8 @@ public class Minion : Actor
     }
 
     private Transform currentTarget;
+    private Transform previousTarget;
+
     private Actor enemyTarget
     {
         get
@@ -77,29 +81,27 @@ public class Minion : Actor
             return null;
         }
     }
-    private Transform previousTarget;
-
-    private float currentHealth;
 
     //State Control
     public enum States
     {
         Idle,
         MoveToLocation,
-        Attack
+        Attack,
+        Path
     }
     public States currentState;
 
     protected override void InitializeOnAwake()
     {
         base.InitializeOnAwake();
-        pathing = GetComponent<PathManager>();
-        currentInterval = attackInterval;
+         
+        seeker = GetComponent<Seeker>();
     }
 
     void Start()
     {
-        Events.Attacked += FriendliesAttacked;
+        //Events.Attack += FriendliesAttacked;
 
         currentStats.speed += Random.Range(-speedVariation, speedVariation);
         UpdateBaseStats();
@@ -109,7 +111,6 @@ public class Minion : Actor
     {
         currentTarget = commander.transform;
         previousTarget = commander.transform;
-        pathing.SetTarget(currentTarget);
     }
 
     void Update()
@@ -118,55 +119,70 @@ public class Minion : Actor
         bus.Action(actions);
     }
 
-    void FollowPath()
+    //Movement
+
+    void Follow(Vector3 position)
     {
-        if(pathing.currentPath.newPath)
+        //point to our target
+        Vector3 dir = position - transform.position;
+
+        //Check if target is in sight
+        Ray sight = new Ray(transform.position, dir);
+
+        //check if we see our leader
+        if(Physics.Raycast(sight, Mathf.Infinity, checkAvoidanceMask))
         {
-            pathNodes = new List<GraphNode>();
-            foreach(GraphNode node in pathing.currentPath.path.path)
+            if(currentPath == null)
             {
-                pathNodes.Add(node);
+                seeker.StartPath(transform.position, position, RequestPath);
             }
-            pathing.currentPath.newPath = false;
+            FollowPath(position);
         }
-        if (pathNodes.Count > 0)
+        else
         {
-            currentNode = pathNodes[0];
+            currentPath = null;
+            MoveInDirection(dir);
+        }
+    }
 
-            Vector3 pos = (Vector3)currentNode.position;
-            Vector3 direction = pos - transform.position;
-            direction.y = direction.z;
+    void MoveInDirection(Vector3 dir)
+    {
+        dir = dir.normalized;
+        dir.y = dir.z;
+        /*dir.x = Mathf.Round(dir.x);
+        dir.y = Mathf.Round(dir.y);
+        dir.z = Mathf.Round(dir.z);*/
 
-            direction = direction.normalized;
-            direction.x = Mathf.Round(direction.x);
-            direction.y = Mathf.Round(direction.y);
-            direction.z = Mathf.Round(direction.z);
+        actions.primaryDirection = dir;
+    }
 
-            actions.primaryDirection = direction;
-
-            if (Vector3.Distance(transform.position, pos) < atNodeRange)
+    void FollowPath(Vector3 target)
+    {
+        if (currentPath != null)
+        {
+            if (currentNodeIndex < currentPath.path.Count)
             {
-                pathNodes.Remove(currentNode);
-                if (pathNodes.Count > 0)
+                GraphNode node = currentPath.path[currentNodeIndex];
+
+                Vector3 pos = (Vector3)node.position;
+                Vector3 direction = pos - transform.position;
+                MoveInDirection(direction);
+
+                if (Vector3.Distance(transform.position, pos) < atNodeRange)
                 {
-                    currentNode = pathNodes[0];
+                    currentNodeIndex++;
                 }
             }
         }
     }
 
-    public override void RecieveDamage(Actor source)
+    void RequestPath(Path p)
     {
-        base.RecieveDamage(source);
-        Events.TriggerAttacked(this, new AttackMessage(source));
-        if (currentState == States.Idle)
-        {
-            currentTarget = source.transform;
-            previousTarget = currentTarget;
-            currentState = States.MoveToLocation;
-        }
+        currentPath = p;
+        currentNodeIndex = 0;
     }
-
+    
+    //Combat
     void Attack(Actor target)
     {
         if (currentInterval > 0)
@@ -175,13 +191,36 @@ public class Minion : Actor
         }
         else
         {
-            target.RecieveDamage(this);
+            Events.TriggerAttack(this, new AttackMessage(target, currentStats.strength));
             currentInterval = attackInterval;
         }
     }
 
+    public override void RecieveDamage(object source, AttackMessage e)
+    {
+        base.RecieveDamage(source, e);
+        if (currentState == States.Idle)
+        {
+            currentTarget = (Transform)source;
+            previousTarget = currentTarget;
+            currentState = States.MoveToLocation;
+        }
+    }
+
+    void FriendliesAttacked(object source, AttackMessage message)
+    {
+        /*if (message.aggressor.tag != gameObject.tag && currentState == States.Idle || currentState == States.MoveToLocation)
+        {
+            currentTarget = message.aggressor.transform;
+            previousTarget = currentTarget;
+            currentState = States.MoveToLocation;
+        }*/
+    }
+
+    //Commands
     public void ChangeLocation(Transform trans)
     {
+        currentPath = null;
         List<Actor> enemies = CheckForEnemies(trans, checkTargetRadius, targetLayers, validTargets);
         if (enemies.Count > 0)
         {
@@ -189,7 +228,6 @@ public class Minion : Actor
             if (previousTarget != currentTarget)
             {
                 previousTarget = currentTarget;
-                pathing.SetTarget(currentTarget);
                 currentState = States.MoveToLocation;
             }
         }
@@ -197,7 +235,6 @@ public class Minion : Actor
         {
             currentTarget = trans;
             previousTarget = trans;
-            pathing.SetTarget(currentTarget);
             currentState = States.MoveToLocation;
         }
     }
@@ -206,10 +243,10 @@ public class Minion : Actor
     {
         currentTarget = home;
         previousTarget = home;
-        pathing.SetTarget(currentTarget);
         currentState = States.MoveToLocation;
     }
 
+    //Enemy Logic
     List<Actor> CheckForEnemies(Transform origin, float radius, LayerMask layers, string tagToWatch)
     {
         List<Actor> enemies = new List<Actor>();
@@ -242,15 +279,6 @@ public class Minion : Actor
         return closest;
     }
 
-    void FriendliesAttacked(object source, AttackMessage message)
-    {
-        if (message.aggressor.tag != gameObject.tag && currentState == States.Idle || currentState == States.MoveToLocation)
-        {
-            currentTarget = message.aggressor.transform;
-            previousTarget = currentTarget;
-            currentState = States.MoveToLocation;
-        }
-    }
 
     void RunStates()
     {
@@ -258,6 +286,7 @@ public class Minion : Actor
         {
             case States.Idle:
                 actions.primaryDirection = Vector3.zero;
+                currentPath = null;
                 if (currentTarget.GetComponent<MinionManager>())
                 {
                     if (!withinCommanderRange || !withinGroupRange)
@@ -289,29 +318,18 @@ public class Minion : Actor
                 }
                 break;
             case States.MoveToLocation:
-                if(currentTarget.tag == validTargets)
+                Follow(currentTarget.position);
+                if (currentTarget.tag == validTargets && withinAttackRange)
                 {
-                    FollowPath();
-                    if(withinAttackRange)
-                    {
-                        currentState = States.Attack;
-                    }
+                    currentState = States.Attack;
                 }
-                else if(currentTarget.GetComponent<MinionManager>())
+                else if (currentTarget.GetComponent<MinionManager>() && withinCommanderRange)
                 {
-                    FollowPath();
-                    if (withinCommanderRange)
-                    {
-                        currentState = States.Idle;
-                    }
+                    currentState = States.Idle;
                 }
-                else
+                else if (Vector3.Distance(transform.position, currentTarget.position) <= atPositionRadius)
                 {
-                    FollowPath();
-                    if(Vector3.Distance(transform.position, currentTarget.position) <= atPositionRadius)
-                    {
-                        currentState = States.Idle;
-                    }
+                    currentState = States.Idle;
                 }
                 break;
         }

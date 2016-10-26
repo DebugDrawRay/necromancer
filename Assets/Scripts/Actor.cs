@@ -22,14 +22,20 @@ public class Actor : MonoBehaviour
 
         actions.stats = currentStats;
 
+        SubscribeToEvents();
         InitializeOnAwake();
+    }
+
+    void SubscribeToEvents()
+    {
+        Events.SubscribeAttack(RecieveDamage);
     }
 
     protected virtual void InitializeOnAwake() { }
 
-    public virtual void RecieveDamage(Actor source)
+    public virtual void RecieveDamage(object source, AttackMessage e)
     {
-        currentStats.health -= source.currentStats.strength;
+        currentStats.health -= e.damage;
     }
 
     public void UpdateBaseStats()

@@ -1,21 +1,28 @@
 ﻿public static class Events
 {
     public delegate void BaseEvent<T>(object sender, T e);
-    public static event BaseEvent<AttackMessage> Attacked;
+    private static event BaseEvent<AttackMessage> Attack;
 
-    public static void TriggerAttacked(object sender, AttackMessage e)
+    public static void TriggerAttack(object sender, AttackMessage e)
     {
-        if(Attacked != null)
+        if(Attack != null)
         {
-            Attacked(sender, e);
+            Attack(sender, e);
         }
+    }
+
+    public static void SubscribeAttack(BaseEvent<AttackMessage> e)
+    {
+        Attack += e;
     }
 }
 public class AttackMessage
 {
-    public Actor aggressor;
-    public AttackMessage(Actor aggressor)
+    public Actor target;
+    public float damage;
+    public AttackMessage(Actor target, float damage)
     {
-        this.aggressor = aggressor;
+        this.target = target;
+        this.damage = damage;
     }
 }
