@@ -14,21 +14,7 @@ public class MinionManager : Action
 
     protected override void Execute(InputActions actions)
     {
-        bool invokePrimary = false;
-        switch(raiseAction)
-        {
-            case InputActions.Actions.PrimaryAction:
-                invokePrimary = actions.primaryAction;
-                break;
-            case InputActions.Actions.SecondaryAction:
-                invokePrimary = actions.secondaryAction;
-                break;
-            case InputActions.Actions.TertiaryAction:
-                invokePrimary = actions.tertiaryAction;
-                break;
-        }
-
-        if(invokePrimary && activeMinions.Count < actions.stats.maxSkeletons)
+        if(GetActionInvoke(raiseAction, actions) && activeMinions.Count < actions.stats.maxSkeletons)
         {
             CreateNewMinion();
         }

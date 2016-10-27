@@ -2,7 +2,6 @@
 using Pathfinding;
 using System.Collections.Generic;
 
-[RequireComponent(typeof(Seeker))]
 public class SeekAndDestroy : Actor
 {
     public enum States
@@ -15,106 +14,27 @@ public class SeekAndDestroy : Actor
 
     [Header("Ranges")]
     public float seekRadius;
-    public float breakOffRadius;
     public float attackRadius;
-    public float atNodeRadius;
 
-    [Header("Attacking")]
+    [Header("Targeting")]
     public LayerMask targetingMask;
     public string primaryTarget;
     public string secondaryTarget;
-
-    public float attackInterval;
-    private float currentInterval;
-
-    private Actor currentTarget;
-
-    [Header("Pathing")]
-    public LayerMask checkAvoidanceMask;
-
-    private Path currentPath;
-
-    private Seeker seeker;
-    private int currentNodeIndex;
 
     public bool withinAttackRange
     {
         get
         {
-            return Vector3.Distance(transform.position, currentTarget.transform.position) <= attackRadius;
+            return Vector3.Distance(transform.position, actions.target.position) <= attackRadius;
         }
     }
 
     protected override void InitializeOnAwake()
     {
         base.InitializeOnAwake();
-        seeker = GetComponent<Seeker>();
     }
 
-    void Follow(Vector3 position)
-    {
-        //point to our target
-        Vector3 dir = position - transform.position;
-
-        //Check if target is in sight
-        Ray sight = new Ray(transform.position, dir);
-
-        //check if we see our leader
-        if (Physics.Raycast(sight, Mathf.Infinity, checkAvoidanceMask))
-        {
-           Debug.Log("Not in sight");
-           if (currentPath == null)
-           {
-               seeker.StartPath(transform.position, position, RequestPath);
-           }
-           FollowPath(position);
-        }
-        else
-        {
-            currentPath = null;
-            MoveInDirection(dir);
-        }
-    }
-
-    void MoveInDirection(Vector3 dir)
-    {
-        dir = dir.normalized;
-        dir.y = dir.z;
-        /*dir.x = Mathf.Round(dir.x);
-        dir.y = Mathf.Round(dir.y);
-        dir.z = Mathf.Round(dir.z);*/
-
-        Debug.DrawRay(transform.position, dir);
-        actions.primaryDirection = dir;
-    }
-
-    void FollowPath(Vector3 target)
-    {
-        if (currentPath != null)
-        {
-            if (currentNodeIndex < currentPath.path.Count)
-            {
-                GraphNode node = currentPath.path[currentNodeIndex];
-
-                Vector3 pos = (Vector3)node.position;
-                Vector3 direction = pos - transform.position;
-                MoveInDirection(direction);
-
-                if (Vector3.Distance(transform.position, pos) < atNodeRadius)
-                {
-                    currentNodeIndex++;
-                }
-            }
-        }
-    }
-
-    void RequestPath(Path p)
-    {
-        currentPath = p;
-        currentNodeIndex = 0;
-    }
-
-    Actor CheckForClosestEnemy(Transform origin, float radius, LayerMask layers, string primaryTarget, string secondaryTarget)
+    Transform CheckForClosestEnemy(Transform origin, float radius, LayerMask layers, string primaryTag, string secondaryTag)
     {
         List<Actor> primaryTargets = new List<Actor>();
         List<Actor> secondaryTargets = new List<Actor>();
@@ -144,7 +64,7 @@ public class SeekAndDestroy : Actor
             enemies = secondaryTargets;
         }
 
-        Actor closest = null;
+        Transform closest = null;
         float closestRange = radius + 5;
         for (int i = 0; i < enemies.Count; i++)
         {
@@ -152,7 +72,7 @@ public class SeekAndDestroy : Actor
             float dist = Vector3.Distance(origin.position, select.transform.position);
             if (dist <= closestRange)
             {
-                closest = select;
+                closest = select.transform;
                 closestRange = dist;
             }
         }
@@ -160,21 +80,9 @@ public class SeekAndDestroy : Actor
         return closest;
     }
 
-    void Attack(Actor target)
-    {
-        if (currentInterval > 0)
-        {
-            currentInterval -= Time.deltaTime;
-        }
-        else
-        {
-            /*target.RecieveDamage(this);*/
-            currentInterval = attackInterval;
-        }
-    }
-
     void Update()
     {
+        actions.target = CheckForClosestEnemy(transform, seekRadius, targetingMask, primaryTarget, secondaryTarget);
         RunStates();
         bus.Action(actions);
     }
@@ -184,45 +92,43 @@ public class SeekAndDestroy : Actor
         switch(currentState)
         {
             case States.Idle:
-                actions.primaryDirection = Vector3.zero;
-                currentTarget = CheckForClosestEnemy(transform, seekRadius, targetingMask, primaryTarget, secondaryTarget);
-                if(currentTarget != null)
+                actions.primaryAction = false;
+                actions.secondaryAction = false;
+                if(actions.target != null)
                 {
                     currentState = States.Seek;
                 }
                 break;
             case States.Seek:
-                Follow(currentTarget.transform.position);
-                float dist = Vector3.Distance(transform.position, currentTarget.transform.position);
-                if(dist > breakOffRadius)
+                actions.primaryAction = true;
+                actions.secondaryAction = false;
+                if(actions.target == null)
                 {
                     currentState = States.Idle;
                 }
-                if(withinAttackRange)
+                else
                 {
-                    currentState = States.Attack;
+                    if(withinAttackRange)
+                    {
+                        currentState = States.Attack;
+                    }
                 }
-                CheckForNewPrimary();
                 break;
             case States.Attack:
-                actions.primaryDirection = Vector3.zero;
-                Attack(currentTarget);
-                if(!withinAttackRange)
+                actions.primaryAction = false;
+                actions.secondaryAction = true;
+                if (actions.target == null)
                 {
-                    currentState = States.Seek;
+                    currentState = States.Idle;
                 }
-                CheckForNewPrimary();
+                else
+                {
+                    if (!withinAttackRange)
+                    {
+                        currentState = States.Seek;
+                    }
+                }
                 break;
-        }
-    }
-
-    void CheckForNewPrimary()
-    {
-        Actor newTarget = CheckForClosestEnemy(transform, seekRadius, targetingMask, primaryTarget, secondaryTarget);
-        if (newTarget != null && newTarget.tag == primaryTarget && currentTarget.tag == secondaryTarget)
-        {
-            currentTarget = newTarget;
-            currentState = States.Seek;
         }
     }
 }

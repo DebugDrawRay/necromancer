@@ -48,6 +48,14 @@ public class Actor : MonoBehaviour
         baseStats = newStats;
         currentStats = (ActorStats)baseStats.Clone();
     }
+
+    public class ActorState
+    {
+        public delegate void State();
+        public State Enter;
+        public State Update;
+        public State Exit;
+    }
 }
 
 [System.Serializable]

@@ -26,4 +26,6 @@ public class InputBus : MonoBehaviour
     public bool tertiaryAction;
 
     public ActorStats stats;
+
+    public Transform target;
 }

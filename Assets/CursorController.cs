@@ -22,17 +22,7 @@ public class CursorController : Action
 
     protected override void Execute(InputActions actions)
     {
-        Vector3 position = Vector3.zero;
-        switch(controlAction)
-        {
-            case InputActions.Actions.PrimaryDirection:
-                position = actions.primaryDirection;
-                break;
-            case InputActions.Actions.SecondaryDirection:
-                position = actions.secondaryDirection;
-                break;
-        }
-
+        Vector3 position = GetDirectionInvoke(controlAction, actions);
         Vector3 cursorPos = Vector3.zero;
 
         Ray ray = Camera.main.ScreenPointToRay(position);
