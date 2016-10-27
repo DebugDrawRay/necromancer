@@ -55,36 +55,23 @@ public class Minion : Actor
     //State Control
     public enum States
     {
-        Idle,
+        FollowCommander,
         MoveToLocation,
-        Attack
+        AttackEnemy
     }
     public States currentState;
 
     public enum Targets
     {
-        Friendly,
+        Commander,
+        Neutral,
         Hostile
     }
 
-    public Targets targetType
-    {
-        get
-        {
-            int mask = (1 << actions.target.gameObject.layer);
-            if ((targetLayers.value & mask) > 0)
-            {
-                return Targets.Hostile;
-            }
-            else
-            {
-                return Targets.Friendly;
-            }
-        }
-    }
+
     void Start()
     {
-        //Events.Attack += FriendliesAttacked;
+        Events.SubscribeAttack(FriendliesAttacked);
 
         currentStats.speed += Random.Range(-speedVariation, speedVariation);
         UpdateBaseStats();
@@ -102,34 +89,41 @@ public class Minion : Actor
         bus.Action(actions);
     }
 
-    public override void RecieveDamage(object source, AttackMessage e)
+    public override void RecieveDamage(Transform source, float damage)
     {
-        base.RecieveDamage(source, e);
-        if (currentState == States.Idle)
+        base.RecieveDamage(source, damage);
+        if (source != previousTarget && currentState == States.MoveToLocation)
         {
-            actions.target = (Transform)source;
-            previousTarget = actions.target;
-            currentState = States.MoveToLocation;
+            actions.target = source;
+            previousTarget = source;
+            currentState = States.AttackEnemy;
+            Events.TriggerAttack(transform, new AttackMessage(source));
         }
     }
 
-    void FriendliesAttacked(object source, AttackMessage message)
+    void FriendliesAttacked(Transform sender, AttackMessage e)
     {
-        /*if (message.aggressor.tag != gameObject.tag && currentState == States.Idle || currentState == States.MoveToLocation)
+        if (sender.tag == gameObject.tag &&
+            sender != transform &&
+            currentState != States.AttackEnemy &&
+            previousTarget != e.source &&
+            Vector3.Distance(transform.position, sender.transform.position) <= commanderRange
+            )
         {
-            currentTarget = message.aggressor.transform;
-            previousTarget = currentTarget;
-            currentState = States.MoveToLocation;
-        }*/
+            actions.target = e.source;
+            previousTarget = e.source;
+            currentState = States.AttackEnemy;
+        }
     }
 
     //Commands
     public void RecieveTarget(Transform target)
     {
-        if (target.GetComponent<MinionCommander>() == commander)
+        if (target == commander.transform)
         {
             actions.target = target;
             previousTarget = actions.target;
+            currentState = States.FollowCommander;
         }
         else
         {
@@ -138,6 +132,7 @@ public class Minion : Actor
             {
                 actions.target = target;
                 previousTarget = actions.target;
+                currentState = States.MoveToLocation;
             }
             else
             {
@@ -145,6 +140,7 @@ public class Minion : Actor
                 {
                     actions.target = enemy;
                     previousTarget = actions.target;
+                    currentState = States.AttackEnemy;
                 }
             }
         }
@@ -180,48 +176,50 @@ public class Minion : Actor
     {
         switch(currentState)
         {
-            case States.Idle:
-                actions.primaryAction = false;
+            case States.FollowCommander:
+                actions.primaryAction = true;
                 actions.secondaryAction = false;
-                if (actions.target == null)
-                {
-                    actions.target = CheckForClosestEnemy(transform, checkTargetRadius, targetLayers);
-                }
-                else
-                {
-                    currentState = States.MoveToLocation;
-                }
-                break;
-            case States.Attack:
-                actions.primaryAction = false;
-                actions.secondaryAction = true;
-                if (actions.target == null)
-                {
-                    currentState = States.Idle;
-                }
-                else
-                {
-                    if (!withinAttackRange)
-                    {
-                        currentState = States.MoveToLocation;
-                    }
-                }
                 break;
             case States.MoveToLocation:
                 actions.primaryAction = true;
                 actions.secondaryAction = false;
-                if (actions.target == null)
+                Transform newTarget = CheckForClosestEnemy(transform, checkTargetRadius, targetLayers);
+                if (newTarget != null)
                 {
-                    currentState = States.Idle;
+                    actions.target = newTarget;
+                    previousTarget = actions.target;
+                    currentState = States.AttackEnemy;
+                }
+                break;
+            case States.AttackEnemy:
+                if(withinAttackRange)
+                {
+                    actions.primaryAction = false;
+                    actions.secondaryAction = true;
                 }
                 else
                 {
-                    if (targetType == Targets.Hostile && withinAttackRange)
-                    {
-                        currentState = States.Attack;
-                    }
+                    actions.primaryAction = true;
+                    actions.secondaryAction = false;
                 }
                 break;
+        }
+    }
+
+    public Targets targetType(Transform target)
+    {
+        int mask = (1 << actions.target.gameObject.layer);
+        if ((targetLayers.value & mask) > 0)
+        {
+            return Targets.Hostile;
+        }
+        else if (commander.gameObject.layer == actions.target.gameObject.layer)
+        {
+            return Targets.Commander;
+        }
+        else
+        {
+            return Targets.Neutral;
         }
     }
 }

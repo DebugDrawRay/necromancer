@@ -1,9 +1,9 @@
 ﻿public static class Events
 {
-    public delegate void BaseEvent<T>(object sender, T e);
+    public delegate void BaseEvent<T>(UnityEngine.Transform sender, T e);
     private static event BaseEvent<AttackMessage> Attack;
 
-    public static void TriggerAttack(object sender, AttackMessage e)
+    public static void TriggerAttack(UnityEngine.Transform sender, AttackMessage e)
     {
         if(Attack != null)
         {
@@ -18,11 +18,9 @@
 }
 public class AttackMessage
 {
-    public Actor target;
-    public float damage;
-    public AttackMessage(Actor target, float damage)
+    public UnityEngine.Transform source;
+    public AttackMessage(UnityEngine.Transform source)
     {
-        this.target = target;
-        this.damage = damage;
+        this.source = source;
     }
 }

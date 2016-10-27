@@ -22,7 +22,8 @@ public class SeekTarget : Action
     public float breakOffRadius;
 
     [Header("Pathing")]
-    public LayerMask pathAvoidance;
+    public LayerMask sightCheckLayers;
+    public LayerMask obstacleLayers;
     public float atNodeRadius;
 
     private Seeker seeker;
@@ -48,7 +49,6 @@ public class SeekTarget : Action
         {
             subActions.primaryDirection = Vector3.zero;
         }
-        Debug.DrawLine(transform.position, actions.target.position, Color.yellow);
     }
 
     void FollowTarget(Transform target)
@@ -64,19 +64,24 @@ public class SeekTarget : Action
 
                 //Check if target is in sight
                 Ray sight = new Ray(transform.position, dir);
-                RaycastHit debug;
+                RaycastHit hitInfo;
                 //check if we see our leader
-                if (!Physics.Raycast(sight, out debug, Mathf.Infinity, pathAvoidance))
+                if (Physics.Raycast(sight, out hitInfo, Mathf.Infinity, sightCheckLayers))
                 {
-                    Debug.Log("Target: " + position + " Debug hit: " + debug.point + " Info: " + debug.collider.name);
-                    Debug.DrawRay(transform.position, dir, Color.yellow);
-                    Debug.DrawLine(transform.position, debug.point, Color.cyan);
-                    UnityEditor.EditorApplication.isPaused = true;
-                    if (currentPath == null)
+                    int mask = (1 << hitInfo.collider.gameObject.layer);
+                    if ((obstacleLayers.value & mask) > 0)
                     {
-                        seeker.StartPath(transform.position, position, RequestPath);
+                        if (currentPath == null)
+                        {
+                            seeker.StartPath(transform.position, position, RequestPath);
+                        }
+                        FollowPath(position);
                     }
-                    FollowPath(position);
+                    else
+                    {
+                        currentPath = null;
+                        MoveInDirection(dir);
+                    }
                 }
                 else
                 {

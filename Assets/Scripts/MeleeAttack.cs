@@ -23,7 +23,7 @@ public class MeleeAttack : Action
         }
         else
         {
-            Events.TriggerAttack(this, new AttackMessage(target, damage));
+            target.RecieveDamage(transform, damage);
             currentInterval = attackInterval;
         }
     }

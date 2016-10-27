@@ -21,6 +21,8 @@ public class SeekAndDestroy : Actor
     public string primaryTarget;
     public string secondaryTarget;
 
+    private Transform previousTarget;
+
     public bool withinAttackRange
     {
         get
@@ -82,7 +84,6 @@ public class SeekAndDestroy : Actor
 
     void Update()
     {
-        actions.target = CheckForClosestEnemy(transform, seekRadius, targetingMask, primaryTarget, secondaryTarget);
         RunStates();
         bus.Action(actions);
     }
@@ -94,8 +95,10 @@ public class SeekAndDestroy : Actor
             case States.Idle:
                 actions.primaryAction = false;
                 actions.secondaryAction = false;
-                if(actions.target != null)
+                actions.target = CheckForClosestEnemy(transform, seekRadius, targetingMask, primaryTarget, secondaryTarget);
+                if (actions.target != null)
                 {
+                    previousTarget = actions.target;
                     currentState = States.Seek;
                 }
                 break;
@@ -112,6 +115,13 @@ public class SeekAndDestroy : Actor
                     {
                         currentState = States.Attack;
                     }
+                    Transform newTarget = CheckForClosestEnemy(transform, seekRadius, targetingMask, primaryTarget, secondaryTarget);
+                    if (newTarget != null && newTarget != previousTarget && newTarget.tag == primaryTarget)
+                    {
+                        actions.target = newTarget;
+                        previousTarget = actions.target;
+                    }
+
                 }
                 break;
             case States.Attack:
@@ -125,6 +135,13 @@ public class SeekAndDestroy : Actor
                 {
                     if (!withinAttackRange)
                     {
+                        currentState = States.Seek;
+                    }
+                    Transform newTarget = CheckForClosestEnemy(transform, seekRadius, targetingMask, primaryTarget, secondaryTarget);
+                    if (newTarget != previousTarget && newTarget.tag == primaryTarget)
+                    {
+                        actions.target = newTarget;
+                        previousTarget = actions.target;
                         currentState = States.Seek;
                     }
                 }

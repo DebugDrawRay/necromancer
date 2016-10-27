@@ -28,14 +28,13 @@ public class Actor : MonoBehaviour
 
     void SubscribeToEvents()
     {
-        Events.SubscribeAttack(RecieveDamage);
     }
 
     protected virtual void InitializeOnAwake() { }
 
-    public virtual void RecieveDamage(object source, AttackMessage e)
+    public virtual void RecieveDamage(Transform source, float damage)
     {
-        currentStats.health -= e.damage;
+        currentStats.health -= damage;
     }
 
     public void UpdateBaseStats()

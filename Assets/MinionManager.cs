@@ -18,6 +18,19 @@ public class MinionManager : Action
         {
             CreateNewMinion();
         }
+        CheckIfFollowing();
+    }
+
+    void CheckIfFollowing()
+    {
+        for(int i = 0; i < followingMinions.Count; i++)
+        {
+            Minion select = followingMinions[i];
+            if(select.currentState != Minion.States.FollowCommander)
+            {
+                followingMinions.RemoveAt(i);
+            }
+        }
     }
 
     void CreateNewMinion()

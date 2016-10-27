@@ -36,13 +36,14 @@ public class MinionCommander : Action
 
         if (GetActionInvoke(returnHomeAction, actions))
         {
-            if (manager.followingMinions.Count != manager.activeMinions.Count)
+            for (int i = 0; i < manager.activeMinions.Count; i++)
             {
-                for (int i = 0; i < manager.activeMinions.Count; i++)
-                {
-                    manager.activeMinions[i].RecieveTarget(transform);
-                    manager.followingMinions.Add(manager.activeMinions[i]);
-                }
+                manager.activeMinions[i].RecieveTarget(transform);
+            }
+            manager.followingMinions = new List<Minion>();
+            for(int i = 0; i < manager.activeMinions.Count; i++)
+            {
+                manager.followingMinions.Add(manager.activeMinions[i]);
             }
         }
     }
