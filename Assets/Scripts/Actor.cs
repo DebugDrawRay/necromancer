@@ -55,8 +55,11 @@ public class Actor : MonoBehaviour
     {
         if(animator != null)
         {
-            animator.SetFloat("x", actionsToAnimate.primaryDirection.x);
-            animator.SetFloat("y", actionsToAnimate.primaryDirection.y);
+            if (actionsToAnimate.primaryDirection != Vector3.zero)
+            {
+                animator.SetFloat("x", actionsToAnimate.primaryDirection.x);
+                animator.SetFloat("y", actionsToAnimate.primaryDirection.y);
+            }
         }
     }
 
