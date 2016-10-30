@@ -76,6 +76,7 @@ public class SeekTarget : Action
                             seeker.StartPath(transform.position, position, RequestPath);
                         }
                         FollowPath(position);
+                        Debug.Log("Following Path");
                     }
                     else
                     {
@@ -91,11 +92,13 @@ public class SeekTarget : Action
             }
             else
             {
+                currentPath = null;
                 subActions.primaryDirection = Vector3.zero;
             }
         }
         else
         {
+            currentPath = null;
             subActions.primaryDirection = Vector3.zero;
         }
 

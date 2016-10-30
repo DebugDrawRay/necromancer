@@ -13,6 +13,9 @@ public class Actor : MonoBehaviour
     protected InputActions actions;
     protected InputBus bus;
 
+    [Header("Animation")]
+    public Animator animator;
+
     void Awake()
     {
         actions = new InputActions();
@@ -46,6 +49,15 @@ public class Actor : MonoBehaviour
     {
         baseStats = newStats;
         currentStats = (ActorStats)baseStats.Clone();
+    }
+
+    public void UpdateAnimation(InputActions actionsToAnimate)
+    {
+        if(animator != null)
+        {
+            animator.SetFloat("x", actionsToAnimate.primaryDirection.x);
+            animator.SetFloat("y", actionsToAnimate.primaryDirection.y);
+        }
     }
 
     public class ActorState

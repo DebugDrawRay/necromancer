@@ -32,5 +32,6 @@ public class Necromancer : Actor
         actions.secondaryAction = input.Command.WasPressed;
         actions.tertiaryAction = input.CallSkeletons.WasPressed;
         bus.Action(actions);
+        UpdateAnimation(actions);
     }
 }
