@@ -55,11 +55,22 @@ public class Actor : MonoBehaviour
     {
         if(animator != null)
         {
-            if (actionsToAnimate.primaryDirection != Vector3.zero)
+            if (actionsToAnimate.primaryDirection.x != 0)
             {
-                animator.SetFloat("x", actionsToAnimate.primaryDirection.x);
-                animator.SetFloat("y", actionsToAnimate.primaryDirection.y);
+                float sign = Mathf.Sign(actionsToAnimate.primaryDirection.x);
+                float abs = Mathf.Abs(actionsToAnimate.primaryDirection.x);
+                int x = Mathf.RoundToInt(Mathf.Ceil(abs) * sign);
+                animator.SetFloat("x", x);
             }
+            if (actionsToAnimate.primaryDirection.y != 0)
+            {
+                float sign = Mathf.Sign(actionsToAnimate.primaryDirection.y);
+                float abs = Mathf.Abs(actionsToAnimate.primaryDirection.y);
+                int y = Mathf.RoundToInt(Mathf.Ceil(abs) * sign);
+                animator.SetFloat("y", y);
+            }
+            animator.SetBool("p_action", actionsToAnimate.primaryAction);
+            animator.SetBool("s_action", actionsToAnimate.secondaryAction);
         }
     }
 

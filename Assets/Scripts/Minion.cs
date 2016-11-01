@@ -87,6 +87,7 @@ public class Minion : Actor
     {
         RunStates();
         bus.Action(actions);
+        UpdateAnimation(actions);
     }
 
     public override void RecieveDamage(Transform source, float damage)

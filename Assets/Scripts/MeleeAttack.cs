@@ -25,6 +25,7 @@ public class MeleeAttack : Action
         {
             target.RecieveDamage(transform, damage);
             currentInterval = attackInterval;
+            Debug.Log(gameObject.GetInstanceID() + " Attacks");
         }
     }
 
