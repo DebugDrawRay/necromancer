@@ -86,6 +86,32 @@ public class SeekAndDestroy : Actor
     {
         RunStates();
         bus.Action(actions);
+        UpdateAnimation(actions);
+    }
+
+    protected override void UpdateAnimation(InputActions actionsToAnimate)
+    {
+        if (actionsToAnimate.target != null)
+        {
+            Vector3 dir = actionsToAnimate.target.position - transform.position;
+            dir = dir.normalized;
+            Debug.DrawRay(transform.position, dir, Color.red);
+            if (dir.x != 0)
+            {
+                float sign = Mathf.Sign(dir.x);
+                float abs = Mathf.Abs(dir.x);
+                int x = Mathf.RoundToInt(Mathf.Ceil(abs) * sign);
+                animator.SetFloat("x", x);
+            }
+            if (dir.z != 0)
+            {
+                float sign = Mathf.Sign(dir.z);
+                float abs = Mathf.Abs(dir.z);
+                int y = Mathf.RoundToInt(Mathf.Ceil(abs) * sign);
+                animator.SetFloat("y", y);
+            }
+        }
+        animator.SetBool("s_action", actionsToAnimate.secondaryAction);
     }
 
     void RunStates()

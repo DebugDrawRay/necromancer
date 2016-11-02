@@ -51,7 +51,7 @@ public class Actor : MonoBehaviour
         currentStats = (ActorStats)baseStats.Clone();
     }
 
-    public void UpdateAnimation(InputActions actionsToAnimate)
+    protected virtual void UpdateAnimation(InputActions actionsToAnimate)
     {
         if(animator != null)
         {
