@@ -22,6 +22,9 @@ public class CameraController : MonoBehaviour
 
     void FixedUpdate()
     {
-        transform.position = Vector3.Lerp(transform.position, anchorPosition, cameraTracking);
+        if (anchor != null)
+        {
+            transform.position = Vector3.Lerp(transform.position, anchorPosition, cameraTracking);
+        }
     }
 }

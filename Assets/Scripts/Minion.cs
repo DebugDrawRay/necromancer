@@ -112,6 +112,11 @@ public class Minion : Actor
             }
         }
         animator.SetBool("s_action", actionsToAnimate.secondaryAction);
+        if (lastHealth != currentStats.health)
+        {
+            animator.SetTrigger("damaged");
+            lastHealth = currentStats.health;
+        }
     }
 
     public override void RecieveDamage(Transform source, float damage)
@@ -141,6 +146,14 @@ public class Minion : Actor
         }
     }
 
+    void OnDestroy()
+    {
+        commander.activeMinions.Remove(this);
+        if(commander.followingMinions.Contains(this))
+        {
+            commander.followingMinions.Remove(this);
+        }
+    }
     //Commands
     public void RecieveTarget(Transform target)
     {
@@ -217,15 +230,22 @@ public class Minion : Actor
                 }
                 break;
             case States.AttackEnemy:
-                if(withinAttackRange)
+                if (actions.target != null)
                 {
-                    actions.primaryAction = false;
-                    actions.secondaryAction = true;
+                    if (withinAttackRange)
+                    {
+                        actions.primaryAction = false;
+                        actions.secondaryAction = true;
+                    }
+                    else
+                    {
+                        actions.primaryAction = true;
+                        actions.secondaryAction = false;
+                    }
                 }
                 else
                 {
-                    actions.primaryAction = true;
-                    actions.secondaryAction = false;
+                    currentState = States.MoveToLocation;
                 }
                 break;
         }

@@ -112,6 +112,11 @@ public class SeekAndDestroy : Actor
             }
         }
         animator.SetBool("s_action", actionsToAnimate.secondaryAction);
+        if (lastHealth != currentStats.health)
+        {
+            animator.SetTrigger("damaged");
+            lastHealth = currentStats.health;
+        }
     }
 
     void RunStates()

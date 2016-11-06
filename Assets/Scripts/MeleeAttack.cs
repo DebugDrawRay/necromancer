@@ -11,7 +11,10 @@ public class MeleeAttack : Action
     {
         if(GetActionInvoke(attackAction, actions))
         {
-            Attack(actions.target.GetComponent<Actor>(), actions.stats.strength);
+            if (actions.target != null)
+            {
+                Attack(actions.target.GetComponent<Actor>(), actions.stats.strength);
+            }
         }
     }
 
@@ -25,7 +28,6 @@ public class MeleeAttack : Action
         {
             target.RecieveDamage(transform, damage);
             currentInterval = attackInterval;
-            Debug.Log(gameObject.GetInstanceID() + " Attacks");
         }
     }
 

@@ -15,6 +15,7 @@ public class Actor : MonoBehaviour
 
     [Header("Animation")]
     public Animator animator;
+    protected float lastHealth;
 
     void Awake()
     {
@@ -24,6 +25,8 @@ public class Actor : MonoBehaviour
         currentStats = (ActorStats)baseStats.Clone();
 
         actions.stats = currentStats;
+
+        lastHealth = currentStats.health;
 
         SubscribeToEvents();
         InitializeOnAwake();
@@ -38,6 +41,7 @@ public class Actor : MonoBehaviour
     public virtual void RecieveDamage(Transform source, float damage)
     {
         currentStats.health -= damage;
+        CheckStatus();
     }
 
     public void UpdateBaseStats()
@@ -71,6 +75,20 @@ public class Actor : MonoBehaviour
             }
             animator.SetBool("p_action", actionsToAnimate.primaryAction);
             animator.SetBool("s_action", actionsToAnimate.secondaryAction);
+
+            if (lastHealth != currentStats.health)
+            {
+                animator.SetTrigger("damaged");
+                lastHealth = currentStats.health;
+            }
+        }
+    }
+
+    protected virtual void CheckStatus()
+    {
+        if(currentStats.health <= 0)
+        {
+            Destroy(gameObject);
         }
     }
 
