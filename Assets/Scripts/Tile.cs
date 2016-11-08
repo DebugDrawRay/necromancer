@@ -1,15 +1,13 @@
 ﻿using UnityEngine;
 using System.Collections;
 
-public class Tile : MonoBehaviour {
+public class Tile : MonoBehaviour
+{
+    public Transform[] connectors;
+    public Transform[] propPlacements;
+    public Transform[] enemyPlacements;
 
-	// Use this for initialization
-	void Start () {
-	
-	}
-	
-	// Update is called once per frame
-	void Update () {
-	
-	}
+    [HideInInspector]
+    public Tile parent;
+
 }

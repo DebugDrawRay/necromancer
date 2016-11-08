@@ -5,7 +5,9 @@ using System.Collections;
 public class Level : ScriptableObject
 {
     public int goalCount;
+    public Vector2 goalDistanceRange;
     public Tileset tileset;
-    public int enemyGroups;
-    public int levelSize;
+    public Vector2 enemyGroupsRange;
+    public Vector2 propsRange;
+    public int tileCount;
 }
