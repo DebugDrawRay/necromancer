@@ -33,7 +33,7 @@ public class LevelGenerator : MonoBehaviour
     void Start()
     {
         levelToProcess = GenerateLevel(levelToLoad);
-        GenerateProps(levelToProcess, levelToLoad.tileset, levelToLoad.propsRange);
+        //GenerateProps(levelToProcess, levelToLoad.tileset, levelToLoad.propsRange);
         loadedLevel = ProcessTiles(levelToProcess);
     }
 
@@ -46,18 +46,20 @@ public class LevelGenerator : MonoBehaviour
         tileCount = 0;
 
         levelToProcess = GenerateLevel(levelToLoad);
-        GenerateProps(levelToProcess, levelToLoad.tileset, levelToLoad.propsRange);
+        //GenerateProps(levelToProcess, levelToLoad.tileset, levelToLoad.propsRange);
         loadedLevel = ProcessTiles(levelToProcess);
     }
 
     List<Tile> GenerateLevel(Level level)
     {
-        List<Tile> generated = new List<Tile>();
+        List<Tile> toDelete = new List<Tile>();
+        List<Tile> processed = new List<Tile>();
+
         Tileset set = level.tileset;
         if (tileMakers.Count <= 0)
         {
             Tile tile = NewTile(set.groundTiles, 0);
-            generated.Add(tile);
+            processed.Add(tile);
             for(int i = 0; i < startingTileMakers; i++)
             {
                 TileMaker maker = new TileMaker();
@@ -81,36 +83,42 @@ public class LevelGenerator : MonoBehaviour
                     Tile newTile = NewTile(set.groundTiles);
                     //apply position
                     newTile.transform.position = connector.position;
-
                     //check collisions
-                    if (tile.parent == null || (tile.parent != null && newTile.transform.position != tile.parent.transform.position))
+                    if (!CheckTileCollision(processed, newTile))
                     {
-                        Debug.Log("Placed");
-                        //Set parents
-                        newTile.parent = tile;
-                        generated.Add(newTile);
-                        //update maker referenced and increment
-                        maker.currentTile = newTile;
                         tileCount++;
                     }
-                    else
-                    {
-                        Debug.Log("Collision");
-                        //dont count tile and destroy
-                        Destroy(newTile.gameObject);
-                    }
+                    //Set parents
+                    newTile.parent = tile;
+                    //update maker reference
+                    maker.currentTile = newTile;
+                    //add tile to return
+                    processed.Add(newTile);
 
                     float roll = Random.value;
-                    if (roll <= tileMakerSpawnChance)
+                    if (roll <= tileMakerSpawnChance && tileMakers.Count < maxTileMakers)
                     {
                         TileMaker newMaker = new TileMaker();
                         maker.currentTile = tile;
                         tileMakers.Add(maker);
+                        Debug.Log("Tile maker generated at " + tileCount);
                     }
                 }
             }
         }
-        return generated;
+
+        for(int i = 0; i < processed.Count; i++)
+        {
+            Tile check = processed[i];
+            if(CheckTileCollision(processed, check))
+            {
+                processed.RemoveAt(i);
+                Destroy(check.gameObject);
+                i--;
+            }
+        }
+        Debug.Log(processed.Count);
+        return processed;
     }
 
     GameObject GenerateProps(List<Tile> tiles, Tileset tileset, Vector2 countRange)
@@ -154,10 +162,23 @@ public class LevelGenerator : MonoBehaviour
         return null;
     }
 
+    bool CheckTileCollision(List<Tile> tiles, Tile tileToCheck)
+    {
+        bool collision = false;
+        foreach(Tile tile in tiles)
+        {
+            if(tileToCheck.transform.position == tile.transform.position && tile != tileToCheck)
+            {
+                collision = true;
+            }
+        }
+        return collision;
+    }
 
     GameObject ProcessTiles(List<Tile> tiles)
     {
         GameObject level = new GameObject("Level");
+        level.isStatic = true;
         level.AddComponent<MeshFilter>();
         level.AddComponent<MeshRenderer>();
 
