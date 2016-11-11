@@ -7,6 +7,11 @@ public class LevelGenerator : MonoBehaviour
 {
     public Level levelToLoad;
 
+    [Header("Generation Settings")]
+    public bool generateLevel = true;
+    public bool generateProps = true;
+    public bool generateColliders = true;
+    public bool processLevel = true;
     [Header("Tile Makers")]
     [Tooltip("Each tile maker will place one tile at a selected connector")]
     public int startingTileMakers;
@@ -16,38 +21,58 @@ public class LevelGenerator : MonoBehaviour
     [Range(0f, 1f)]
     public float tileMakerSpawnChance;
 
-    private int tileCount;
-    
     public class TileMaker
     {
         public Tile currentTile;
         public Tile lastTile;
     }
     private List<TileMaker> tileMakers = new List<TileMaker>();
-    private GameObject loadedLevel;
+    private int tileCount;
 
-    [Header("Tile generation")]
-    public LayerMask tileCollisionLayer;
     private List<Tile> levelToProcess;
+
+    private GameObject loadedLevel;
+    private GameObject propsContainer;
+    private GameObject collidersContainer;
+
+    [Header("Level Processing")]
+    public Vector3 levelRotation;
 
     void Start()
     {
-        levelToProcess = GenerateLevel(levelToLoad);
-        //GenerateProps(levelToProcess, levelToLoad.tileset, levelToLoad.propsRange);
-        loadedLevel = ProcessTiles(levelToProcess);
+        GenerateNewLevel();
+        AstarPath.active.Scan();
     }
 
     [ContextMenu("Generate New Level")]
     public void GenerateNewLevel()
     {
         Destroy(loadedLevel);
+        Destroy(propsContainer);
 
         tileMakers = new List<TileMaker>();
         tileCount = 0;
 
-        levelToProcess = GenerateLevel(levelToLoad);
-        //GenerateProps(levelToProcess, levelToLoad.tileset, levelToLoad.propsRange);
-        loadedLevel = ProcessTiles(levelToProcess);
+        if (generateLevel)
+        {
+            levelToProcess = GenerateLevel(levelToLoad);
+            if (generateProps)
+            {
+                propsContainer = GenerateProps(levelToProcess, levelToLoad.tileset, levelToLoad.propsRange);
+            }
+            if(generateColliders)
+            {
+                collidersContainer = GenerateColliders(levelToProcess, levelToLoad.tileset);
+            }
+            if (processLevel)
+            {
+                loadedLevel = ProcessTiles(levelToProcess);
+            }
+
+            loadedLevel.transform.rotation = Quaternion.Euler(levelRotation);
+            propsContainer.transform.rotation = Quaternion.Euler(levelRotation);
+            collidersContainer.transform.rotation = Quaternion.Euler(levelRotation);
+        }
     }
 
     List<Tile> GenerateLevel(Level level)
@@ -99,9 +124,8 @@ public class LevelGenerator : MonoBehaviour
                     if (roll <= tileMakerSpawnChance && tileMakers.Count < maxTileMakers)
                     {
                         TileMaker newMaker = new TileMaker();
-                        maker.currentTile = tile;
+                        maker.currentTile = newTile;
                         tileMakers.Add(maker);
-                        Debug.Log("Tile maker generated at " + tileCount);
                     }
                 }
             }
@@ -153,6 +177,25 @@ public class LevelGenerator : MonoBehaviour
 
         return propContainer;
     }
+
+    GameObject GenerateColliders(List<Tile> tiles, Tileset tileset)
+    {
+        GameObject container = new GameObject("Colliders");
+        GameObject collider = tileset.emptyTileCollider;
+
+        foreach(Tile tile in tiles)
+        {
+            foreach(Transform connector in tile.connectors)
+            {
+                if(!CheckTileCollision(tiles, connector.position) && !CheckColliderCollision(container.transform, connector.position))
+                {
+                    Instantiate(collider, connector.position, connector.rotation, container.transform);
+                }
+            }
+        }
+
+        return container;
+    }
     List<GameObject> GenerateEnemies(List<Tile> tiles)
     {
         return null;
@@ -162,6 +205,18 @@ public class LevelGenerator : MonoBehaviour
         return null;
     }
 
+    bool CheckColliderCollision(Transform colliders, Vector3 position)
+    {
+        bool collision = false;
+        foreach (Transform collider in colliders)
+        {
+            if (position == collider.position)
+            {
+                collision = true;
+            }
+        }
+        return collision;
+    }
     bool CheckTileCollision(List<Tile> tiles, Tile tileToCheck)
     {
         bool collision = false;
@@ -174,91 +229,106 @@ public class LevelGenerator : MonoBehaviour
         }
         return collision;
     }
+    bool CheckTileCollision(List<Tile> tiles, Vector3 positionToCheck)
+    {
+        bool collision = false;
+        foreach (Tile tile in tiles)
+        {
+            if (positionToCheck == tile.transform.position)
+            {
+                collision = true;
+            }
+        }
+        return collision;
+    }
 
     GameObject ProcessTiles(List<Tile> tiles)
     {
+        //Create container
         GameObject level = new GameObject("Level");
         level.isStatic = true;
         level.AddComponent<MeshFilter>();
         level.AddComponent<MeshRenderer>();
 
-        // Find all mesh filter submeshes and separate them by their cooresponding materials
-        ArrayList materials = new ArrayList();
-        ArrayList combineInstanceArrays = new ArrayList();
-
+        //Create lists for materials, meshes and combine instances
         List<MeshFilter> meshFilters = new List<MeshFilter>();
+        List<Material> materials = new List<Material>();
+        List<List<CombineInstance>> combineInstanceArrays = new List<List<CombineInstance>>();
+
+        //Add mesh filters from tiles
         foreach(Tile tile in tiles)
         {
             meshFilters.Add(tile.GetComponentInChildren<MeshFilter>());
         }
 
+        //Get materials from the renderer of the filter
         foreach (MeshFilter meshFilter in meshFilters)
         {
             MeshRenderer meshRenderer = meshFilter.GetComponent<MeshRenderer>();
 
-            // Handle bad input
-            if (!meshRenderer)
-            {
-                Debug.LogError("MeshFilter does not have a coresponding MeshRenderer.");
-                continue;
-            }
-            if (meshRenderer.materials.Length != meshFilter.sharedMesh.subMeshCount)
-            {
-                Debug.LogError("Mismatch between material count and submesh count. Is this the correct MeshRenderer?");
-                continue;
-            }
-
+            //Iterate through all meshes and get materials
             for (int s = 0; s < meshFilter.sharedMesh.subMeshCount; s++)
             {
                 int materialArrayIndex = 0;
                 for (materialArrayIndex = 0; materialArrayIndex < materials.Count; materialArrayIndex++)
                 {
+                    //if material was already added, skip it
                     if (materials[materialArrayIndex] == meshRenderer.sharedMaterials[s])
                     {
                         break;
                     }
                 }
 
+                //if the material wasn't found in the array, add it to the material list and add a new combine instance list for it
                 if (materialArrayIndex == materials.Count)
                 {
                     materials.Add(meshRenderer.sharedMaterials[s]);
-                    combineInstanceArrays.Add(new ArrayList());
+                    combineInstanceArrays.Add(new List<CombineInstance>());
                 }
-
+                //Create a new combine instance and set its properties
                 CombineInstance combineInstance = new CombineInstance();
                 combineInstance.transform = meshRenderer.transform.localToWorldMatrix;
+                //set index to the same as the submesh;
                 combineInstance.subMeshIndex = s;
+                //add the entire mesh
                 combineInstance.mesh = meshFilter.sharedMesh;
-                (combineInstanceArrays[materialArrayIndex] as ArrayList).Add(combineInstance);
+                //add the combine instance to the correct list corresponding to the material
+                //if the material corresponding to the submesh already exists in the array, this will add the submesh to the list corresponding to the material
+                combineInstanceArrays[materialArrayIndex].Add(combineInstance);
             }
         }
 
-        // Get / Create mesh filter
+        //Reference the container's mesh filter
         MeshFilter meshFilterCombine = level.GetComponent<MeshFilter>();
 
-        // Combine by material index into per-material meshes
-        // also, Create CombineInstance array for next step
+        //Create array of meshes by material count, and create array of combine instances with the same param
         Mesh[] meshes = new Mesh[materials.Count];
         CombineInstance[] combineInstances = new CombineInstance[materials.Count];
 
+        //For each material, get the list of corresponding submeshes and convert to array
         for (int m = 0; m < materials.Count; m++)
         {
-            CombineInstance[] combineInstanceArray = (combineInstanceArrays[m] as ArrayList).ToArray(typeof(CombineInstance)) as CombineInstance[];
+            CombineInstance[] combineInstanceArray = combineInstanceArrays[m].ToArray();
+            //Create new mesh and combine submeshes
             meshes[m] = new Mesh();
             meshes[m].CombineMeshes(combineInstanceArray, true, true);
 
+            //add the new mesh to the combine instances and set its submeshindex
             combineInstances[m] = new CombineInstance();
             combineInstances[m].mesh = meshes[m];
             combineInstances[m].subMeshIndex = 0;
         }
 
-        // Combine into one
+        // Combine all submeshes
         meshFilterCombine.sharedMesh = new Mesh();
         meshFilterCombine.sharedMesh.CombineMeshes(combineInstances, false, false);
 
-        // Assign materials
-        Material[] materialsArray = materials.ToArray(typeof(Material)) as Material[];
-        level.GetComponent<MeshRenderer>().materials = materialsArray;
+        //Convert materials list to array and add to renderer
+        //Material[] materialsArray = materials.ToArray();
+        //level.GetComponent<MeshRenderer>().materials = materialsArray;
+
+        //Add tileset material for the ground
+        level.GetComponent<MeshRenderer>().material = levelToLoad.tileset.groundMaterial;
 
         level.AddComponent<MeshCollider>();
         level.GetComponent<MeshCollider>().sharedMesh = level.GetComponent<MeshFilter>().sharedMesh;
@@ -267,7 +337,6 @@ public class LevelGenerator : MonoBehaviour
         {
             Destroy(tile.gameObject);
         }
-
         return level;
     }
     Tile NewTile(GameObject[] tiles, int select)
