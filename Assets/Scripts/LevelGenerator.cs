@@ -147,7 +147,7 @@ public class LevelGenerator : MonoBehaviour
 
     GameObject GenerateProps(List<Tile> tiles, Tileset tileset, Vector2 countRange)
     {
-        GameObject propContainer = new GameObject("Props");
+        GameObject container = new GameObject("Props");
         List<Transform> placements = new List<Transform>();
         foreach(Tile tile in tiles)
         {
@@ -171,17 +171,18 @@ public class LevelGenerator : MonoBehaviour
             int selectProp = Random.Range(0, tileset.props.Length);
             GameObject prop = tileset.props[selectProp];
 
-            GameObject newProp = (GameObject)Instantiate(prop, place.position, place.rotation, propContainer.transform);
+            GameObject newProp = (GameObject)Instantiate(prop, place.position, place.rotation, container.transform);
             placements.RemoveAt(selectTrans);
         }
 
-        return propContainer;
+        return container;
     }
 
     GameObject GenerateColliders(List<Tile> tiles, Tileset tileset)
     {
         GameObject container = new GameObject("Colliders");
         GameObject collider = tileset.emptyTileCollider;
+        container.isStatic = true;
 
         foreach(Tile tile in tiles)
         {
