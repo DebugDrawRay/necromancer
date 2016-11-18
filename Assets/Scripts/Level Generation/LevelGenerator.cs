@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
-using System.Collections;
+using System;
 using Utilities;
 
 public class LevelGenerator : MonoBehaviour
@@ -8,9 +8,9 @@ public class LevelGenerator : MonoBehaviour
     public Level levelToLoad;
 
     [Header("Generation Settings")]
-    public bool generateLevel = true;
+    public bool generateTiles = true;
     public bool generateProps = true;
-    public bool generateColliders = true;
+    public bool generateBorders = true;
     public bool processLevel = true;
     [Header("Tile Makers")]
     [Tooltip("Each tile maker will place one tile at a selected connector")]
@@ -23,28 +23,212 @@ public class LevelGenerator : MonoBehaviour
 
     public class TileMaker
     {
-        public Tile currentTile;
-        public Tile lastTile;
+        public Vector2 currentPosition;
     }
     private List<TileMaker> tileMakers = new List<TileMaker>();
     private int tileCount;
 
-    private List<Tile> levelToProcess;
-
     private GameObject loadedLevel;
+    private GameObject tileContainer;
     private GameObject propsContainer;
-    private GameObject collidersContainer;
+    private GameObject borderContainer;
 
     [Header("Level Processing")]
     public Vector3 levelRotation;
 
+    private Node wallHead;
+    private Node tileHead;
+
+    private Node[,] nodes;
+    private Vector2[] traversalDirections = { new Vector2(0, 1), new Vector2(0, -1), new Vector2(1, 0), new Vector2(-1, 0) };
     void Start()
     {
-        GenerateNewLevel();
-        AstarPath.active.Scan();
+        GenerateNewLevel(levelToLoad);
+        if(AstarPath.active)
+        {
+            AstarPath.active.Scan();
+        }
     }
 
     [ContextMenu("Generate New Level")]
+    public void GenerateMenu()
+    {
+        GenerateNewLevel(levelToLoad);
+    }
+
+    public void GenerateNewLevel(Level load)
+    {
+        if(tileContainer != null)
+        {
+            Destroy(tileContainer.gameObject);
+        }
+        if(borderContainer != null)
+        {
+            Destroy(borderContainer.gameObject);
+        }
+
+        tileMakers = new List<TileMaker>();
+        tileCount = 0;
+        
+        if (generateTiles)
+        {
+            nodes = GenerateTiles(traversalDirections, load.tileCount, load.tileset.tileNode);
+            if (generateBorders)
+            {
+                nodes = GenerateBorders(nodes, load.tileset.borderNode, traversalDirections);
+            }
+            if (generateProps)
+            {
+
+            }
+            tileContainer = ProcessNodes(nodes, load.tileset.groundTile, Node.Type.Tile);
+            borderContainer = ProcessNodes(nodes, load.tileset.borderTile, Node.Type.Border);
+
+            GameObject tiles = ProcessMesh(tileContainer.transform, tileContainer.name, load.tileset.groundMaterial);
+            Destroy(tileContainer);
+        }
+
+    }
+
+    Node[,] GenerateTiles(Vector2[] directions, int maxTiles, Node nodeToPlace)
+    {
+        //Create a new node matrix
+        Node[,] newNodes = new Node[maxTiles * 2, maxTiles * 2];
+        //If there are no makers, create up to the starting amount
+        if (tileMakers.Count <= 0)
+        {
+            for (int i = 0; i < startingTileMakers; i++)
+            {
+                TileMaker maker = new TileMaker();
+                maker.currentPosition = new Vector2(maxTiles, maxTiles);
+                tileMakers.Add(maker);
+            }
+        }
+        //Initialize the current tiles
+        int currentTiles = 0;
+
+        //create tiles
+        while (currentTiles < maxTiles)
+        {
+            //for each maker
+            for(int i = 0; i < tileMakers.Count; i++)
+            {
+                //if tiles have reached max, break out
+                if(currentTiles >= maxTiles)
+                {
+                    break;
+                }
+                //select the tile makers and clone a node at it's position
+                TileMaker maker = tileMakers[i];
+                newNodes[(int)maker.currentPosition.x, (int)maker.currentPosition.y] = nodeToPlace.CloneNode();
+
+                //check for unoccupied positions
+                List<Vector2> freePositions = new List<Vector2>();
+                for (int j = 0; j < directions.Length; j++)
+                {
+                    Vector2 check = maker.currentPosition + directions[j];
+                    if (newNodes[(int)check.x, (int)check.y] == null)
+                    {
+                        freePositions.Add(directions[j]);
+                    }
+                }
+                //if there are free positions, use them, else randomly select a position
+                if (freePositions.Count > 0)
+                {
+                    maker.currentPosition += freePositions[UnityEngine.Random.Range(0, freePositions.Count)];
+                    currentTiles++;
+                }
+                else
+                {
+                    Vector2 dir = directions[UnityEngine.Random.Range(0, directions.Length)];
+                    maker.currentPosition += dir;
+                }
+                //increment tiles
+
+                //Check if a new maker gets generated
+                if (UnityEngine.Random.value <= tileMakerSpawnChance && tileMakers.Count < maxTileMakers)
+                {
+                    Debug.Log("New Maker");
+                    TileMaker newMaker = new TileMaker();
+                    newMaker.currentPosition = maker.currentPosition;
+                    tileMakers.Add(maker);
+                }
+            }
+        }
+        return newNodes;
+    }
+
+    Node[,] GenerateBorders(Node[,] nodes, Node nodeToPlace, Vector2[] directions)
+    {
+        for(int x = 0; x < nodes.GetLength(0); x++)
+        {
+            for(int y = 0; y < nodes.GetLength(0); y++)
+            {
+                Node select = nodes[x, y];
+                if(select != null && select.nodeType == Node.Type.Tile)
+                {
+                    foreach(Vector2 dir in directions)
+                    {
+                        Vector2 checkDir = new Vector2(x + dir.x, y + dir.y);
+                        if(checkDir.x < nodes.GetLength(0) && checkDir.y < nodes.GetLength(0) && nodes[(int)checkDir.x, (int)checkDir.y] == null)
+                        {
+                            nodes[(int)checkDir.x, (int)checkDir.y] = nodeToPlace.CloneNode();
+                        }
+                    }
+                }
+            }
+        }
+        return nodes;
+    }
+
+    //List<Node> GetAdjacent(Vector2 start, Node[,] nodes, Vector2[] directions)
+    //{
+    //    List<Node> adjacent = new List<Node>();
+    //    Node origin = nodes[(int)start.x, (int)start.y];
+    //    if(origin == null)
+    //    {
+    //        return adjacent;
+    //    }
+    //    else
+    //    {
+    //        adjacent.Add(origin);
+    //        foreach(Vector2 dir in directions)
+    //        {
+    //            Vector2 checkDir = new Vector2(start.x + dir.x, start.y + dir.y);
+    //            if (checkDir.x < nodes.GetLength(0) && checkDir.y < nodes.GetLength(0) && nodes[(int)checkDir.x, (int)checkDir.y] == null)
+    //            {
+    //                return Get
+    //            }
+    //        }
+    //    }
+    //}
+    //void ProcessBorders(Transform borderContainer, Vector2[] directions)
+    //{
+    //    foreach(Transform border in borderContainer)
+    //    {
+    //        foreach
+    //    }
+    //}
+
+    public GameObject ProcessNodes(Node[,] nodes, GameObject nodeObject, Node.Type type)
+    {
+        GameObject container = new GameObject(Enum.GetName(typeof(Node.Type), (int)type));
+        int size = nodes.GetLength(0) / 2;
+        for (int x = 0; x < nodes.GetLength(0); x++)
+        {
+            for (int y = 0; y < nodes.GetLength(0); y++)
+            {
+                Node node = nodes[x, y];
+                if (node != null && node.nodeType == type)
+                {
+                    GameObject newObj = (GameObject)Instantiate(nodeObject, container.transform);
+                    newObj.transform.position = new Vector3((x - size) * newObj.transform.localScale.x, 0, (y - size) * newObj.transform.localScale.y);
+                }
+            }
+        }
+        return container;
+    }
+    /*
     public void GenerateNewLevel()
     {
         Destroy(loadedLevel);
@@ -55,23 +239,35 @@ public class LevelGenerator : MonoBehaviour
 
         if (generateLevel)
         {
-            levelToProcess = GenerateLevel(levelToLoad);
+            lastTile = GenerateLevel(levelToLoad);
             if (generateProps)
             {
                 propsContainer = GenerateProps(levelToProcess, levelToLoad.tileset, levelToLoad.propsRange);
             }
-            if(generateColliders)
+            if(generateBorders)
             {
-                collidersContainer = GenerateColliders(levelToProcess, levelToLoad.tileset);
+                borderContainer = GenerateBorder(levelToProcess, levelToLoad.tileset);
             }
             if (processLevel)
             {
-                loadedLevel = ProcessTiles(levelToProcess);
+                List<MeshFilter> meshFilters = new List<MeshFilter>();
+                //Add mesh filters from tiles
+                foreach (Tile tile in levelToProcess)
+                {
+                    meshFilters.Add(tile.GetComponentInChildren<MeshFilter>());
+                }
+                loadedLevel = ProcessMesh(meshFilters.ToArray(), "Level", levelToLoad.tileset.groundMaterial);
+                foreach (Tile tile in levelToProcess)
+                {
+                    Destroy(tile.gameObject);
+                }
+
+                borderContainer = ProcessBorder(lastWall);
             }
 
             loadedLevel.transform.rotation = Quaternion.Euler(levelRotation);
             propsContainer.transform.rotation = Quaternion.Euler(levelRotation);
-            collidersContainer.transform.rotation = Quaternion.Euler(levelRotation);
+            borderContainer.transform.rotation = Quaternion.Euler(levelRotation);
         }
     }
 
@@ -178,7 +374,7 @@ public class LevelGenerator : MonoBehaviour
         return container;
     }
 
-    GameObject GenerateColliders(List<Tile> tiles, Tileset tileset)
+    GameObject GenerateBorder(List<Tile> tiles, Tileset tileset)
     {
         GameObject container = new GameObject("Colliders");
         GameObject collider = tileset.emptyTileCollider;
@@ -190,12 +386,34 @@ public class LevelGenerator : MonoBehaviour
             {
                 if(!CheckTileCollision(tiles, connector.position) && !CheckColliderCollision(container.transform, connector.position))
                 {
-                    Instantiate(collider, connector.position, connector.rotation, container.transform);
+                    GameObject wall = (GameObject)Instantiate(collider, connector.position, connector.rotation, container.transform);
+                    if(lastWall == null)
+                    {
+                        lastWall = wall.GetComponent<Node>();
+                    }
+                    else
+                    {
+                        wall.GetComponent<Node>().parent = lastWall.GetComponent<Node>();
+                        lastWall = wall.GetComponent<Node>();
+                    }
                 }
             }
         }
 
         return container;
+    }
+
+    GameObject ProcessBorder(Node head)
+    {
+        Node wall = head;
+        List<MeshFilter> meshes = new List<MeshFilter>();
+        while(wall != null)
+        {
+            meshes.Add(wall.GetComponentInChildren<MeshFilter>());
+            Debug.Log(wall.GetComponentInChildren<MeshFilter>().GetInstanceID());
+            wall = wall.parent;
+        }
+        return ProcessMesh(meshes.ToArray(), "Walls", levelToLoad.tileset.borderMaterial);
     }
     List<GameObject> GenerateEnemies(List<Tile> tiles)
     {
@@ -241,29 +459,27 @@ public class LevelGenerator : MonoBehaviour
             }
         }
         return collision;
-    }
+    }*/
 
-    GameObject ProcessTiles(List<Tile> tiles)
+    GameObject ProcessMesh(Transform objectToCombine, string name, Material combineMaterial)
     {
         //Create container
-        GameObject level = new GameObject("Level");
-        level.isStatic = true;
-        level.AddComponent<MeshFilter>();
-        level.AddComponent<MeshRenderer>();
+        GameObject container = new GameObject(name);
+        container.isStatic = true;
+        container.AddComponent<MeshFilter>();
+        container.AddComponent<MeshRenderer>();
 
         //Create lists for materials, meshes and combine instances
-        List<MeshFilter> meshFilters = new List<MeshFilter>();
+        List<MeshFilter> meshesToCombine = new List<MeshFilter>();
+        foreach(Transform obj in objectToCombine)
+        {
+            meshesToCombine.Add(obj.GetComponent<MeshFilter>());
+        }
         List<Material> materials = new List<Material>();
         List<List<CombineInstance>> combineInstanceArrays = new List<List<CombineInstance>>();
 
-        //Add mesh filters from tiles
-        foreach(Tile tile in tiles)
-        {
-            meshFilters.Add(tile.GetComponentInChildren<MeshFilter>());
-        }
-
         //Get materials from the renderer of the filter
-        foreach (MeshFilter meshFilter in meshFilters)
+        foreach (MeshFilter meshFilter in meshesToCombine)
         {
             MeshRenderer meshRenderer = meshFilter.GetComponent<MeshRenderer>();
 
@@ -300,7 +516,7 @@ public class LevelGenerator : MonoBehaviour
         }
 
         //Reference the container's mesh filter
-        MeshFilter meshFilterCombine = level.GetComponent<MeshFilter>();
+        MeshFilter meshFilterCombine = container.GetComponent<MeshFilter>();
 
         //Create array of meshes by material count, and create array of combine instances with the same param
         Mesh[] meshes = new Mesh[materials.Count];
@@ -329,24 +545,10 @@ public class LevelGenerator : MonoBehaviour
         //level.GetComponent<MeshRenderer>().materials = materialsArray;
 
         //Add tileset material for the ground
-        level.GetComponent<MeshRenderer>().material = levelToLoad.tileset.groundMaterial;
+        container.GetComponent<MeshRenderer>().material = combineMaterial;
 
-        level.AddComponent<MeshCollider>();
-        level.GetComponent<MeshCollider>().sharedMesh = level.GetComponent<MeshFilter>().sharedMesh;
-
-        foreach (Tile tile in tiles)
-        {
-            Destroy(tile.gameObject);
-        }
-        return level;
-    }
-    Tile NewTile(GameObject[] tiles, int select)
-    {
-        return ((GameObject)Instantiate(tiles[select], Vector3.zero, Quaternion.identity)).GetComponent<Tile>();
-    }
-    Tile NewTile(GameObject[] tiles)
-    {
-        int select = Random.Range(0, tiles.Length);
-        return ((GameObject)Instantiate(tiles[select], Vector3.zero, Quaternion.identity)).GetComponent<Tile>();
+        container.AddComponent<MeshCollider>();
+        container.GetComponent<MeshCollider>().sharedMesh = container.GetComponent<MeshFilter>().sharedMesh;
+        return container;
     }
 }

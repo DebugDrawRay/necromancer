@@ -4,9 +4,14 @@ using System.Collections;
 [System.Serializable]
 public class Tileset : ScriptableObject
 {
-    public GameObject[] groundTiles;
+    [SerializeField]
+    public Node tileNode;
+    [SerializeField]
+    public Node borderNode;
+    public GameObject groundTile;
     public Material groundMaterial;
-    public GameObject[] borderTiles;
+    public GameObject borderTile;
+    public Material borderMaterial;
     public GameObject[] props;
     public GameObject[] enemyGroups;
     public GameObject[] goals;
