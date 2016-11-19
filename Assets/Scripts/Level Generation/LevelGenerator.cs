@@ -82,10 +82,11 @@ public class LevelGenerator : MonoBehaviour
 
             }
             tileContainer = ProcessNodes(nodes, load.tileset.groundTile, Node.Type.Tile);
-            borderContainer = ProcessNodes(nodes, load.tileset.borderTile, Node.Type.Border);
+            //borderContainer = ProcessNodes(nodes, load.tileset.borderTile, Node.Type.Border);
 
             GameObject tiles = ProcessMesh(tileContainer.transform, tileContainer.name, load.tileset.groundMaterial);
             Destroy(tileContainer);
+            ProcessBorders(nodes, traversalDirections, load.tileset.borderTile);
         }
 
     }
@@ -121,6 +122,7 @@ public class LevelGenerator : MonoBehaviour
                 //select the tile makers and clone a node at it's position
                 TileMaker maker = tileMakers[i];
                 newNodes[(int)maker.currentPosition.x, (int)maker.currentPosition.y] = nodeToPlace.CloneNode();
+                newNodes[(int)maker.currentPosition.x, (int)maker.currentPosition.y].position = maker.currentPosition;
 
                 //check for unoccupied positions
                 List<Vector2> freePositions = new List<Vector2>();
@@ -173,6 +175,7 @@ public class LevelGenerator : MonoBehaviour
                         if(checkDir.x < nodes.GetLength(0) && checkDir.y < nodes.GetLength(0) && nodes[(int)checkDir.x, (int)checkDir.y] == null)
                         {
                             nodes[(int)checkDir.x, (int)checkDir.y] = nodeToPlace.CloneNode();
+                            nodes[(int)checkDir.x, (int)checkDir.y].position = checkDir;
                         }
                     }
                 }
@@ -181,34 +184,46 @@ public class LevelGenerator : MonoBehaviour
         return nodes;
     }
 
-    //List<Node> GetAdjacent(Vector2 start, Node[,] nodes, Vector2[] directions)
-    //{
-    //    List<Node> adjacent = new List<Node>();
-    //    Node origin = nodes[(int)start.x, (int)start.y];
-    //    if(origin == null)
-    //    {
-    //        return adjacent;
-    //    }
-    //    else
-    //    {
-    //        adjacent.Add(origin);
-    //        foreach(Vector2 dir in directions)
-    //        {
-    //            Vector2 checkDir = new Vector2(start.x + dir.x, start.y + dir.y);
-    //            if (checkDir.x < nodes.GetLength(0) && checkDir.y < nodes.GetLength(0) && nodes[(int)checkDir.x, (int)checkDir.y] == null)
-    //            {
-    //                return Get
-    //            }
-    //        }
-    //    }
-    //}
-    //void ProcessBorders(Transform borderContainer, Vector2[] directions)
-    //{
-    //    foreach(Transform border in borderContainer)
-    //    {
-    //        foreach
-    //    }
-    //}
+    GameObject ProcessBorders(Node[,] nodes, Vector2[] directions, GameObject borderObject)
+    {
+        List<List<Node>> groups = new List<List<Node>>();
+        int size = nodes.GetLength(0) / 2;
+        foreach (Node node in nodes)
+        {
+            if(node != null && !node.visited && node.nodeType == Node.Type.Border)
+            {
+                groups.Add(FindAdjacent(node, new List<Node>(), nodes, directions));
+            }
+        }
+        foreach(List<Node> group in groups)
+        {
+            GameObject newGroup = new GameObject(group.Count.ToString());
+            foreach(Node node in group)
+            {
+                GameObject newObj = (GameObject)Instantiate(borderObject, newGroup.transform);
+                newObj.transform.position = new Vector3((node.position.x - size) * newObj.transform.localScale.x, 0, (node.position.y - size) * newObj.transform.localScale.z);
+            }
+        }
+        return null;
+    }
+
+    List<Node> FindAdjacent(Node head, List<Node> found, Node[,] nodes, Vector2[] directions)
+    {
+        if (!head.visited)
+        {
+            head.visited = true;
+            found.Add(head);
+            foreach (Vector2 dir in directions)
+            {
+                Node child = nodes[(int)(head.position.x + dir.x), (int)(head.position.y + dir.y)];
+                if (child != null && !child.visited && child.nodeType == Node.Type.Border)
+                {
+                    FindAdjacent(child, found, nodes, directions);
+                }
+            }
+        }
+        return found;
+    }
 
     public GameObject ProcessNodes(Node[,] nodes, GameObject nodeObject, Node.Type type)
     {

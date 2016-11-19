@@ -11,7 +11,9 @@ public class Node : ICloneable
     }
     public Type nodeType;
 
+    public Vector2 position;
     public Node parent;
+    public bool visited;
     [Range(0, 1)]
     public Vector3[] enemyGroups;
     [Range(0, 1)]
