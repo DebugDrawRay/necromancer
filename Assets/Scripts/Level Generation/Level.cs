@@ -17,7 +17,7 @@ public class Level : ScriptableObject
     }
     public LevelSizes levelSize;
 
-    private const int smallSize = 50;
+    private const int smallSize = 250;
     private const int mediumSize = 500;
     private const int largeSize = 750;
 

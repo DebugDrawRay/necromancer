@@ -22,10 +22,6 @@ public class RaycastFade : MonoBehaviour
     {
         Ray cast = new Ray(transform.position, target.position - transform.position);
         RaycastHit hit;
-        if (Physics.Raycast(cast, out hit, Mathf.Infinity, castAgainst) && hit.collider.transform == target)
-        {
-            Debug.Log("Player");
-        }
         if (Physics.Raycast(cast, out hit, Mathf.Infinity, castAgainst) && hit.collider.transform != target)
         {
             Debug.Log("Hit");
