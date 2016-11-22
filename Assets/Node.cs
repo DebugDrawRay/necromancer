@@ -15,9 +15,7 @@ public class Node : ICloneable
     public Vector2 position;
     [HideInInspector]
     public bool visited;
-    [Range(0, 1)]
     public Vector3[] enemyGroups;
-    [Range(0, 1)]
     public Vector3[] propGroups;
 
     public object Clone()

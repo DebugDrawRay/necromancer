@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
-using Pathfinding;
 using System.Collections.Generic;
+using DG.Tweening;
 
 public class SeekAndDestroy : Actor
 {
@@ -116,6 +116,7 @@ public class SeekAndDestroy : Actor
         {
             animator.SetTrigger("damaged");
             lastHealth = currentStats.health;
+            transform.DOShakePosition(.25f, .5f, 100, 90);
         }
     }
 

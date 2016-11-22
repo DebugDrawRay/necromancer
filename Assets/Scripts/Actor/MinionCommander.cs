@@ -23,15 +23,13 @@ public class MinionCommander : Action
     {
         if (GetActionInvoke(moveToLocationAction, actions))
         {
-            currentWaypoint = Instantiate(waypoint).transform;
-            currentWaypoint.position = cursor.transform.position;
-
             if (manager.followingMinions.Count > 0)
             {
                 Minion skel = manager.followingMinions[0];
-                skel.RecieveTarget(currentWaypoint);
+                skel.RecieveTarget(cursor.transform);
                 manager.followingMinions.Remove(skel);
             }
+            cursor.animator.SetTrigger("leftClick");
         }
 
         if (GetActionInvoke(returnHomeAction, actions))
@@ -45,6 +43,7 @@ public class MinionCommander : Action
             {
                 manager.followingMinions.Add(manager.activeMinions[i]);
             }
+            cursor.animator.SetTrigger("rightClick");
         }
     }
 }

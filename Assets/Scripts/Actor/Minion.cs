@@ -1,7 +1,6 @@
 ﻿using UnityEngine;
-using Pathfinding;
-using System.Collections;
 using System.Collections.Generic;
+using DG.Tweening;
 
 [RequireComponent(typeof(Seeker))]
 public class Minion : Actor 
@@ -116,6 +115,7 @@ public class Minion : Actor
         {
             animator.SetTrigger("damaged");
             lastHealth = currentStats.health;
+            transform.DOShakePosition(.25f, .5f, 100, 90);
         }
     }
 

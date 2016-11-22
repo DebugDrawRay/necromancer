@@ -4,7 +4,7 @@ using System.Collections;
 public class CommandCursor : MonoBehaviour 
 {
     public static CommandCursor instance;
-
+    public Animator animator;
     void Awake()
     {
         if(instance != null)
@@ -13,4 +13,5 @@ public class CommandCursor : MonoBehaviour
         }
         instance = this;
     }
+
 }

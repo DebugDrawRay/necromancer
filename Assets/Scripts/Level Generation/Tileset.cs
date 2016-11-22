@@ -15,6 +15,4 @@ public class Tileset : ScriptableObject
     public GameObject[] props;
     public GameObject[] enemyGroups;
     public GameObject[] goals;
-
-    public GameObject emptyTileCollider;
 }

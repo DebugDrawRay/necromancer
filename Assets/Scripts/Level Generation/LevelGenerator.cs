@@ -1,10 +1,11 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
-using System;
 using Utilities;
 
 public class LevelGenerator : MonoBehaviour
 {
+    public List<Vector3> debugPositions;
+
     public Level levelToLoad;
 
     [Header("Generation Settings")]
@@ -64,6 +65,7 @@ public class LevelGenerator : MonoBehaviour
         
         if (generateTiles)
         {
+            loadedLevel = new GameObject("Level");
             nodes = GenerateTiles(traversalDirections, load.tileCount, load.tileset.tileNode);
             if (generateBorders)
             {
@@ -71,11 +73,10 @@ public class LevelGenerator : MonoBehaviour
             }
             if (generateProps)
             {
-
+                GenerateProps(nodes, load.tileset, load.propCount).transform.SetParent(loadedLevel.transform);
             }
             if(processLevel)
             {
-                loadedLevel = new GameObject("Level");
                 ProcessTiles(nodes, load.tileset).transform.SetParent(loadedLevel.transform);
                 ProcessBorders(nodes, traversalDirections, load.tileset).transform.SetParent(loadedLevel.transform);
                 loadedLevel.transform.rotation = Quaternion.Euler(levelRotation);
@@ -177,6 +178,64 @@ public class LevelGenerator : MonoBehaviour
         return nodes;
     }
 
+    GameObject GenerateProps(Node[,] nodes, Tileset set, int count)
+    {
+        GameObject container = new GameObject("Props");
+        int size = nodes.GetLength(0) / 2;
+        List<Vector3> validPositions = new List<Vector3>();
+
+        foreach (Node node in nodes)
+        {
+            if (node != null)
+            {
+                foreach (Vector3 pos in node.propGroups)
+                {
+                    Vector3 valid = new Vector3((node.position.x - size) * set.groundTile.transform.localScale.x, 0, (node.position.y - size) * set.groundTile.transform.localScale.y);
+                    valid.x += (set.groundTile.transform.localScale.x * pos.x) / 2;
+                    valid.z += (set.groundTile.transform.localScale.y * pos.z) / 2;
+                    validPositions.Add(valid);
+                }
+            }
+        }
+        debugPositions = validPositions;
+        int current = 0;
+        while(current < count)
+        {
+            int propSelect = Random.Range(0, set.props.Length);
+            GameObject prop = set.props[propSelect];
+
+            int spawnSelect = Random.Range(0, validPositions.Count);
+            Vector3 spawnPos = validPositions[spawnSelect];
+
+            Instantiate(prop, spawnPos, Quaternion.identity, container.transform);
+            validPositions.RemoveAt(spawnSelect);
+            current++;
+        }
+        return container;
+    }
+
+    GameObject ProcessTiles(Node[,] nodes, Tileset set)
+    {
+        GameObject container = new GameObject();
+        int size = nodes.GetLength(0) / 2;
+        for (int x = 0; x < nodes.GetLength(0); x++)
+        {
+            for (int y = 0; y < nodes.GetLength(0); y++)
+            {
+                Node node = nodes[x, y];
+                if (node != null && node.nodeType == Node.Type.Tile)
+                {
+                    GameObject newObj = (GameObject)Instantiate(set.groundTile, container.transform);
+                    newObj.transform.position = new Vector3((x - size) * newObj.transform.localScale.x, 0, (y - size) * newObj.transform.localScale.y);
+                }
+            }
+        }
+        GameObject tiles = ProcessMesh(container.transform, "Tiles", set.groundMaterial);
+        tiles.layer = set.groundTile.layer;
+        Destroy(container);
+        return tiles;
+    }
+
     GameObject ProcessBorders(Node[,] nodes, Vector2[] directions, Tileset set)
     {
         GameObject borders = new GameObject("Borders");
@@ -219,26 +278,6 @@ public class LevelGenerator : MonoBehaviour
         return found;
     }
 
-    GameObject ProcessTiles(Node[,] nodes, Tileset set)
-    {
-        GameObject container = new GameObject();
-        int size = nodes.GetLength(0) / 2;
-        for (int x = 0; x < nodes.GetLength(0); x++)
-        {
-            for (int y = 0; y < nodes.GetLength(0); y++)
-            {
-                Node node = nodes[x, y];
-                if (node != null && node.nodeType == Node.Type.Tile)
-                {
-                    GameObject newObj = (GameObject)Instantiate(set.groundTile, container.transform);
-                    newObj.transform.position = new Vector3((x - size) * newObj.transform.localScale.x, 0, (y - size) * newObj.transform.localScale.y);
-                }
-            }
-        }
-        GameObject tiles = ProcessMesh(container.transform, "Tiles", set.groundMaterial);
-        Destroy(container);
-        return tiles;
-    }
 
     GameObject ProcessMesh(Transform objectToCombine, string name, Material combineMaterial)
     {
