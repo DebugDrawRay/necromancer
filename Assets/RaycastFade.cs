@@ -6,9 +6,11 @@ public class RaycastFade : MonoBehaviour
     public LayerMask castAgainst;
     public Color fadeTo;
     public float fadeSpeed;
+    public Shader transparencyShader;
     private Transform target;
 
     private MeshRenderer lastHit;
+    private Shader lastShader;
 
     void Start()
     {
@@ -24,27 +26,34 @@ public class RaycastFade : MonoBehaviour
         RaycastHit hit;
         if (Physics.Raycast(cast, out hit, Mathf.Infinity, castAgainst) && hit.collider.transform != target)
         {
-            Debug.Log("Hit");
             MeshRenderer render = hit.collider.GetComponentInChildren<MeshRenderer>();
-            if (render)
+            if(lastHit != render)
             {
-                if (render != lastHit)
+                if (lastHit)
                 {
-                    if (lastHit)
-                    {
-                        lastHit.material.DOColor(Color.white, fadeSpeed);
-                    }
-                    lastHit = render;
-                    lastHit.material.DOColor(fadeTo, fadeSpeed);
+                    StartCoroutine(FadeTo(lastHit, Color.white, fadeSpeed, lastShader));
                 }
+
+                lastHit = render;
+                lastShader = render.material.shader;
+                lastHit.material.shader = transparencyShader;
+                lastHit.material.DOColor(fadeTo, fadeSpeed);
             }
         }
         else
         {
-            if (lastHit && lastHit.material.color != Color.white)
+            if (lastHit)
             {
-                lastHit.material.DOColor(Color.white, fadeSpeed);
+                StartCoroutine(FadeTo(lastHit, Color.white, fadeSpeed, lastShader));
+                lastHit = null;
             }
         }
+    }
+
+    IEnumerator FadeTo(MeshRenderer render, Color to, float speed, Shader result)
+    {
+        render.material.DOColor(to, speed);
+        yield return new WaitUntil(() => { return render.material.color == to; });
+        render.material.shader = result;
     }
 }

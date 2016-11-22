@@ -318,12 +318,12 @@ public class LevelGenerator : MonoBehaviour
         // Combine all submeshes
         meshFilterCombine.sharedMesh = new Mesh();
         meshFilterCombine.sharedMesh.CombineMeshes(combineInstances, false, false);
-
+        meshFilterCombine.sharedMesh.Optimize();
         //Convert materials list to array and add to renderer
         //Material[] materialsArray = materials.ToArray();
         //level.GetComponent<MeshRenderer>().materials = materialsArray;
 
-        //Add tileset material for the ground
+        //Assign material
         container.GetComponent<MeshRenderer>().material = combineMaterial;
 
         container.AddComponent<MeshCollider>();
